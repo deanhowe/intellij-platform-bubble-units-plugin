@@ -1,45 +1,105 @@
 package com.github.deanhowe.intellijplatformbubbleunitsplugin.toolWindow
 
-import com.intellij.openapi.components.service
-import com.intellij.openapi.diagnostic.thisLogger
+import com.github.deanhowe.intellijplatformbubbleunitsplugin.services.BubbleSettingsService
+import com.github.deanhowe.intellijplatformbubbleunitsplugin.services.BubbleReportWatcher
+import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.wm.ToolWindow
 import com.intellij.openapi.wm.ToolWindowFactory
-import com.intellij.ui.components.JBLabel
-import com.intellij.ui.components.JBPanel
+import com.intellij.openapi.wm.ex.ToolWindowManagerListener
+import com.intellij.ui.content.Content
 import com.intellij.ui.content.ContentFactory
-import com.github.deanhowe.intellijplatformbubbleunitsplugin.MyBundle
-import com.github.deanhowe.intellijplatformbubbleunitsplugin.services.MyProjectService
-import javax.swing.JButton
-
+import com.intellij.ui.content.ContentManager
+import com.intellij.ui.jcef.JBCefBrowser
+import com.github.deanhowe.intellijplatformbubbleunitsplugin.toolWindow.attachConsoleLogger
+import java.awt.BorderLayout
+import javax.swing.JPanel
 
 class MyToolWindowFactory : ToolWindowFactory {
 
-    init {
-        thisLogger().warn("Don't forget to remove all non-needed sample code files with their corresponding registration entries in `plugin.xml`.")
-    }
-
     override fun createToolWindowContent(project: Project, toolWindow: ToolWindow) {
-        val myToolWindow = MyToolWindow(toolWindow)
-        val content = ContentFactory.getInstance().createContent(myToolWindow.getContent(), null, false)
-        toolWindow.contentManager.addContent(content)
+        val myToolWindow = MyToolWindow(project, toolWindow)
+        val contentManager = toolWindow.contentManager
+        val content = contentManager.factory.createContent(myToolWindow.getContent(), null, false)
+        contentManager.addContent(content)
     }
 
     override fun shouldBeAvailable(project: Project) = true
 
-    class MyToolWindow(toolWindow: ToolWindow) {
+    class MyToolWindow(private val project: Project, private val toolWindow: ToolWindow) {
 
-        private val service = toolWindow.project.service<MyProjectService>()
+        private val settings = BubbleSettingsService.getInstance(project)
+        private var browser: JBCefBrowser? = null
+        private val panel = JPanel(BorderLayout())
 
-        fun getContent() = JBPanel<JBPanel<*>>().apply {
-            val label = JBLabel(MyBundle.message("randomLabel", "?"))
+        init {
+            // Initialize the browser
+            createBrowser()
 
-            add(label)
-            add(JButton(MyBundle.message("shuffle")).apply {
-                addActionListener {
-                    label.text = MyBundle.message("randomLabel", service.getRandomNumber())
+            // Add a listener to detect when the tool window is shown or hidden
+            project.messageBus.connect(project).subscribe(
+                ToolWindowManagerListener.TOPIC,
+                object : ToolWindowManagerListener {
+                    override fun stateChanged() {
+                        if (toolWindow.isVisible) {
+                            // Tool window is shown, reload the browser
+                            if (browser == null) {
+                                createBrowser()
+                            } else {
+                                loadUrl()
+                            }
+                        } else {
+                            // Tool window is hidden, dispose the browser
+                            disposeBrowser()
+                        }
+                    }
                 }
-            })
+            )
+
+            // Subscribe to junit-report.xml changes and reload the panel when it changes
+            project.messageBus.connect(project).subscribe(
+                BubbleReportWatcher.TOPIC,
+                object : BubbleReportWatcher.Listener {
+                    override fun junitReportChanged() {
+                        // Rebuild URL (it depends on the XML content) and reload
+                        loadUrl()
+                    }
+                }
+            )
+
+            // Ensure the watcher service is initialized
+            BubbleReportWatcher.getInstance(project)
+        }
+
+        fun getContent(): JPanel {
+            return panel
+        }
+
+        private fun createBrowser() {
+            browser = JBCefBrowser()
+            // Attach JCEF console logger to help debug loading issues
+            val log = Logger.getInstance(MyToolWindowFactory::class.java)
+            browser?.let { attachConsoleLogger(it, log) }
+
+            panel.removeAll()
+            panel.add(browser!!.component, BorderLayout.CENTER)
+            panel.revalidate()
+            panel.repaint()
+            loadUrl()
+        }
+
+        private fun disposeBrowser() {
+            browser?.let {
+                panel.remove(it.component)
+                it.dispose()
+                browser = null
+                panel.revalidate()
+                panel.repaint()
+            }
+        }
+
+        private fun loadUrl() {
+            browser?.loadURL(settings.url)
         }
     }
 }

@@ -1,15 +1,24 @@
 <!-- Plugin Configuration File. Read more: https://plugins.jetbrains.com/docs/intellij/plugin-configuration-file.html -->
 <idea-plugin>
     <id>com.github.deanhowe.intellijplatformbubbleunitsplugin</id>
-    <name>intellij-platform-bubble-units-plugin</name>
+    <name>Bubble Units</name>
     <vendor>deanhowe</vendor>
 
     <depends>com.intellij.modules.platform</depends>
+<!--    <depends>org.intellij.plugins.markdown</depends>-->
 
     <resource-bundle>messages.MyBundle</resource-bundle>
 
     <extensions defaultExtensionNs="com.intellij">
-        <toolWindow factoryClass="com.github.deanhowe.intellijplatformbubbleunitsplugin.toolWindow.MyToolWindowFactory" id="MyToolWindow"/>
+        <toolWindow factoryClass="com.github.deanhowe.intellijplatformbubbleunitsplugin.toolWindow.MyToolWindowFactory" 
+                   id="BubbleUnits" 
+                   anchor="right"
+                   icon="AllIcons.General.Web"/>
         <postStartupActivity implementation="com.github.deanhowe.intellijplatformbubbleunitsplugin.startup.MyProjectActivity" />
+        <projectConfigurable 
+            parentId="tools" 
+            instance="com.github.deanhowe.intellijplatformbubbleunitsplugin.settings.BubbleSettingsConfigurable"
+            id="com.github.deanhowe.intellijplatformbubbleunitsplugin.settings.BubbleSettingsConfigurable" 
+            displayName="BubbleUnits Settings"/>
     </extensions>
 </idea-plugin>

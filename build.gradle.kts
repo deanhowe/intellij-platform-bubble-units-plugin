@@ -134,6 +134,10 @@ tasks {
     publishPlugin {
         dependsOn(patchChangelog)
     }
+
+    test {
+        systemProperty("java.util.logging.config.file", "${project.projectDir}/src/test/resources/test-log.properties")
+    }
 }
 
 intellijPlatformTesting {
