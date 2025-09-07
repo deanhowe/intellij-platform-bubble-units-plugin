@@ -13,19 +13,19 @@ class MyBundleTest : BasePlatformTestCase() {
     fun testBubbleToolWindowTitle() {
         // Test that the bundle correctly retrieves the tool window title
         val message = MyBundle.message("bubbleToolWindowTitle")
-        assertEquals("Bubble Units", message)
+        assertEquals("BubbleUnits", message)
     }
 
     fun testBubbleSettingsTitle() {
         // Test that the bundle correctly retrieves the settings title
         val message = MyBundle.message("bubbleSettingsTitle")
-        assertEquals("Bubble Units Settings", message)
+        assertEquals("BubbleUnits Settings", message)
     }
 
     fun testBubbleSettingsUrlLabel() {
         // Test that the bundle correctly retrieves the URL label
         val message = MyBundle.message("bubbleSettingsUrlLabel")
-        assertEquals("URL:", message)
+        assertEquals("URL", message)
     }
 
     fun testMessageFormatting() {

@@ -21,9 +21,15 @@ fun attachConsoleLogger(browser: JBCefBrowser, log: Logger) {
             source: String?,
             line: Int
         ): Boolean {
-            val lvl = level?.toString() ?: "INFO"
-            // Use warn to make messages noticeable in logs
-            log.warn("[JCEF Console][$lvl] $message ($source:$line)")
+            val lvlEnum = level ?: CefSettings.LogSeverity.LOGSEVERITY_INFO
+            val lvl = lvlEnum.toString()
+            val text = "[JCEF Console][$lvl] ${'$'}message (${'$'}source:${'$'}line)"
+            when (lvlEnum) {
+                CefSettings.LogSeverity.LOGSEVERITY_ERROR,
+                CefSettings.LogSeverity.LOGSEVERITY_FATAL -> log.error(text)
+                CefSettings.LogSeverity.LOGSEVERITY_WARNING -> log.warn(text)
+                else -> log.info(text)
+            }
             return false // allow default handling too
         }
     }, (browser.cefBrowser))

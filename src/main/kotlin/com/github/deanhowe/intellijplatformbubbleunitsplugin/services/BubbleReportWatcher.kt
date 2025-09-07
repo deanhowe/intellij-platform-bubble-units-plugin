@@ -29,7 +29,6 @@ class BubbleReportWatcher(private val project: Project) : VirtualFileListener, D
         fun getInstance(project: Project): BubbleReportWatcher = project.service()
     }
 
-    private var connection: Any? = null
     private var registered = false
 
     init {
