@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Bubble Units Style Guide</title>
+  <style>
+    :root{
+      --color-text: {{textColour}};
+      --color-bg: {{BGColour}};
+      --color-error: {{errorColour}};
+      --color-warning: {{warningColour}};
+      --color-failed: {{warningColour}};
+      --color-success: {{successColour}};
+      --color-info: {{infoColour}};
+    }
+
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, Noto Sans, "Apple Color Emoji", "Segoe UI Emoji";
+      background: var(--color-bg);
+      color: var(--color-text);
+      line-height: 1.5;
+    }
+    .container { max-width: 980px; margin: 2rem auto; padding: 1.5rem; }
+    .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    .swatch {
+      border-radius: 8px;
+      border: 1px solid rgba(128,128,128,.25);
+      padding: 12px;
+      background: rgba(127,127,127,0.05);
+    }
+    .row { display: flex; align-items: center; gap: 12px; }
+    .chip { width: 40px; height: 40px; border-radius: 6px; border: 1px solid rgba(0,0,0,.15); flex: none; }
+    .kv { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; font-size: 12px; opacity: .9; }
+    .h1 { font-size: 28px; margin: 0 0 6px; }
+    .muted { opacity: .8; }
+    .sample {
+      border-radius: 8px;
+      border: 1px dashed rgba(128,128,128,.35);
+      padding: 12px;
+      margin-top: 18px;
+    }
+    .btns { display: flex; gap: 8px; flex-wrap: wrap; }
+    .btn { padding: 6px 10px; border-radius: 6px; border: 1px solid currentColor; background: transparent; color: inherit; cursor: default; }
+
+    /* Demonstration components wired to CSS vars */
+    .alert { padding: 10px 12px; border-radius: 8px; border: 1px solid; margin: 6px 0; }
+    .alert.error { color: var(--color-error); border-color: var(--color-error); }
+    .alert.warning { color: var(--color-warning); border-color: var(--color-warning); }
+    .alert.success { color: var(--color-success); border-color: var(--color-success); }
+    .alert.info { color: var(--color-info); border-color: var(--color-info); }
+
+    .legend { display: grid; grid-template-columns: repeat(5, minmax(0,1fr)); gap: 10px; margin-top: 10px; }
+    .legend .chip { width: 24px; height: 24px; }
+    .legend .item { display: flex; align-items: center; gap: 8px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1 class="h1">Bubble Units Theme Variables</h1>
+    <p class="muted">Project: <strong>{{BUBBLE_UNITS_PROJECT_NAME}}</strong></p>
+    <p class="muted">{{BUBBLE_UNITS_INTRO}}</p>
+
+    <div class="grid">
+      <div class="swatch">
+        <div class="row">
+          <div class="chip" style="background: var(--color-bg);"></div>
+          <div>
+            <div><strong>Background</strong></div>
+            <div class="kv">--color-bg: {{BGColour}}</div>
+          </div>
+        </div>
+        <div class="row" style="margin-top:10px;">
+          <div class="chip" style="background: var(--color-text);"></div>
+          <div>
+            <div><strong>Text</strong></div>
+            <div class="kv">--color-text: {{textColour}}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="swatch">
+        <div class="h1" style="margin-bottom:10px;">Status colors</div>
+        <div class="legend">
+          <div class="item"><div class="chip" style="background: var(--color-success);"></div><span class="kv">--color-success: {{successColour}}</span></div>
+          <div class="item"><div class="chip" style="background: var(--color-warning);"></div><span class="kv">--color-warning: {{warningColour}}</span></div>
+          <div class="item"><div class="chip" style="background: var(--color-failed);"></div><span class="kv">--color-failed: {{warningColour}}</span></div>
+          <div class="item"><div class="chip" style="background: var(--color-error);"></div><span class="kv">--color-error: {{errorColour}}</span></div>
+          <div class="item"><div class="chip" style="background: var(--color-info);"></div><span class="kv">--color-info: {{infoColour}}</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sample">
+      <div class="h1">Sample components</div>
+      <p>This section previews how the CSS variables affect simple UI components.</p>
+      <div class="alert success">Success message using var(--color-success)</div>
+      <div class="alert warning">Warning message using var(--color-warning)</div>
+      <div class="alert error">Error message using var(--color-error)</div>
+      <div class="alert info">Info message using var(--color-info)</div>
+
+      <div class="btns" style="margin-top:10px;">
+        <button class="btn" style="color: var(--color-success);">Success</button>
+        <button class="btn" style="color: var(--color-warning);">Warning</button>
+        <button class="btn" style="color: var(--color-error);">Error</button>
+        <button class="btn" style="color: var(--color-info);">Info</button>
+        <button class="btn">Text (inherits --color-text)</button>
+      </div>
+    </div>
+
+    <div class="sample" style="margin-top:18px;">
+      <div class="h1">Computed values</div>
+      <p class="kv">text: <span id="v-text"></span> | bg: <span id="v-bg"></span> | success: <span id="v-success"></span> | warning: <span id="v-warning"></span> | failed: <span id="v-failed"></span> | error: <span id="v-error"></span> | info: <span id="v-info"></span></p>
+    </div>
+  </div>
+
+  <script>
+    (function showComputedVars(){
+      const s = getComputedStyle(document.documentElement);
+      const get = (name) => s.getPropertyValue(name).trim();
+      const ids = {
+        '#v-text': '--color-text',
+        '#v-bg': '--color-bg',
+        '#v-success': '--color-success',
+        '#v-warning': '--color-warning',
+        '#v-failed': '--color-failed',
+        '#v-error': '--color-error',
+        '#v-info': '--color-info'
+      };
+      for (const [id, varName] of Object.entries(ids)) {
+        const el = document.querySelector(id);
+        if (el) el.textContent = get(varName);
+      }
+      // Also set body background to verify var parsing clearly
+      document.body.style.background = get('--color-bg');
+      document.body.style.color = get('--color-text');
+    })();
+  </script>
+</body>
+</html>

@@ -19,121 +19,124 @@ import java.nio.charset.StandardCharsets.UTF_8
 class BubbleSettingsService(private val project: Project) : PersistentStateComponent<BubbleSettingsService.State> {
 
 
+    private var cachedDefaultUrl: String? = null
+    private var cachedSignature: Int = 0
+
     private val DEFAULT_URL: String
         get() {
-
             val BGColour: Color = JBColor.namedColor("Panel.background", JBColor.PanelBackground)
+            val textColour: Color = JBColor.namedColor("Label.foreground", JBColor.foreground())
 
             val projectName = project.name + " BubbleUnits"
             val projectPath = project.basePath ?: ""
-            val junitFile = File(Paths.get(projectPath, "junit-report.xml").toString())
             val junitPath = Paths.get(projectPath, "junit-report.xml").toString()
 
             val junitXml = runCatching { File(junitPath).readText(UTF_8) }.getOrDefault("")
-            //val dataUrl = "data:text/xml;charset=utf-8;base64:" +
             val dataUrl = Base64.getEncoder().encodeToString(junitXml.toByteArray(UTF_8))
 
+            val errorColor: Color = JBColor.namedColor("Label.errorForeground", JBColor.RED)
+            val warningColor: Color = JBColor.namedColor("Label.warningForeground", Color(0xFFC107)) // amber fallback
+            val successColor: Color = JBColor.namedColor("Label.successForeground", Color(0x2E7D32))
+            val infoColor: Color = JBColor.namedColor("Label.infoForeground", Color(0x2196F3))
+
+            // Build a lightweight signature to detect changes without re-encoding every time
+            val signature = arrayOf(
+                projectName,
+                projectPath,
+                junitXml.hashCode().toString(),
+                toCssColor(BGColour),
+                toCssColor(textColour),
+                toCssColor(errorColor),
+                toCssColor(warningColor),
+                toCssColor(successColor),
+                toCssColor(infoColor),
+                resolveHtmlToLoad(),
+                state.htmlDirectory ?: ""
+            ).contentHashCode()
+
+            if (cachedDefaultUrl != null && cachedSignature == signature) {
+                return cachedDefaultUrl!!
+            }
+
             val junitHtmlFile = loadBubbleHtmlWithReplacements(mapOf(
-                "BGColour" to BGColour.toString(),
+                "BGColour" to toCssColor(BGColour),
+                "textColour" to toCssColor(textColour),
+                "errorColour" to toCssColor(errorColor),
+                "warningColour" to toCssColor(warningColor),
+                "successColour" to toCssColor(successColor),
+                "infoColour" to toCssColor(infoColor),
                 "BUBBLE_UNITS_PROJECT_NAME" to projectName,
                 "BUBBLE_UNITS_INTRO" to "",
                 "JUNIT_XML_BASE64" to dataUrl,
                 "JUNIT_PATH" to junitPath,
                 "PROJECT_BASE_PATH" to projectPath
-            )
-            )
+            ))
 
-
-
-//                // Use a data URL instead of loading from JAR to avoid sandboxing issues
-//                val htmlContent = """
-//                    <!DOCTYPE html>
-//                    <html>
-//                    <head>
-//                        <meta http-equiv="refresh" content="0;url=https://local.test/bubbles">
-//                        <title>Redirecting to Bubble Units</title>
-//                    </head>
-//                    <body>
-//                        <p>Redirecting to Bubble Units...</p>
-//                    </body>
-//                    </html>
-//                """.trimIndent()
-
-                    // Use a data URL instead of loading from JAR to avoid sandboxing issues
-                    //val htmlContent = junitFile.readText(Charsets.UTF_8)
-                    val htmlContent = junitHtmlFile
-//            if (junitFile.exists()) {
-//            }
-
-
-            // Encode the HTML content as a base64 data URL without compression
-            val encodedHtml = java.util.Base64.getEncoder().encodeToString(htmlContent.toByteArray(Charsets.UTF_8))
-            return "data:text/html;charset=utf-8;base64,$encodedHtml"
+            val encodedHtml = java.util.Base64.getEncoder().encodeToString(junitHtmlFile.toByteArray(Charsets.UTF_8))
+            val result = "data:text/html;charset=utf-8;base64,$encodedHtml"
+            cachedDefaultUrl = result
+            cachedSignature = signature
+            return result
         }
     private var customUrl: String? = null
 
     data class State(
-        var customUrl: String? = null
+        var customUrl: String? = null,
+        var devPanelEnabled: Boolean = false,
+        var htmlDirectory: String? = null,
+        var selectedHtmlFile: String? = null
     )
 
     private val state = State()
 
     var url: String
         get() {
-            // First priority: User-configured URL from settings
+            // 1) Explicit custom URL from settings always wins if non-blank
             if (!customUrl.isNullOrBlank()) {
                 return customUrl!!
             }
 
-            // Second priority: URL from .env file
+            // 2) If development panel is enabled, force rendering of the selected/bundled HTML
+            if (state.devPanelEnabled) {
+                return DEFAULT_URL
+            }
+
+            // 3) Otherwise, try .env URL
             val envUrl = getUrlFromEnvFile()
             if (envUrl != null) {
                 return envUrl
             }
 
-            // Third priority: Default URL
+            // 4) Fallback to default
             return DEFAULT_URL
         }
         set(value) {
-            customUrl = value
-            state.customUrl = value
+            val normalized = value?.trim().orEmpty()
+            // Treat blank as null to allow dev panel/.env to take effect
+            customUrl = if (normalized.isEmpty()) null else normalized
+            state.customUrl = customUrl
+            invalidateCache()
         }
 
+    fun resolveUrlFromEnvMap(map: Map<String, String>): String? {
+        val bubble = map["BUBBLE_UNITS_URL"]?.trim().orEmpty()
+        if (bubble.isNotEmpty()) return bubble
+        val app = map["APP_URL"]?.trim().orEmpty()
+        if (app.isNotEmpty()) return app
+        return null
+    }
+
     private fun getUrlFromEnvFile(): String? {
-        try {
+        return try {
             val projectPath = project.basePath ?: return null
             val envFile = File(Paths.get(projectPath, ".env").toString())
+            if (!envFile.exists()) return null
 
-            if (!envFile.exists()) {
-                return null
-            }
-
-            var appUrl: String? = null
-
-            // First pass: look for BUBBLE_UNITS_URL
-            envFile.readLines().forEach { line ->
-                val trimmedLine = line.trim()
-                if (trimmedLine.startsWith("BUBBLE_UNITS_URL=")) {
-                    val url = trimmedLine.substring("BUBBLE_UNITS_URL=".length).trim()
-                    // Remove quotes if present
-                    return url.removeSurrounding("\"").removeSurrounding("'")
-                }
-                else if (trimmedLine.startsWith("APP_URL=")) {
-                    val url = trimmedLine.substring("APP_URL=".length).trim()
-                    // Store APP_URL for later if BUBBLE_UNITS_URL is not found
-                    appUrl = url.removeSurrounding("\"").removeSurrounding("'")
-                }
-            }
-
-            // Return APP_URL if found and BUBBLE_UNITS_URL was not found
-            if (appUrl != null) {
-                return appUrl
-            }
-
-            return null
+            val map = EnvParser.parseEnvLines(envFile.readLines())
+            resolveUrlFromEnvMap(map)
         } catch (e: Exception) {
             thisLogger().warn("Error reading .env file: ${e.message}")
-            return null
+            null
         }
     }
 
@@ -141,7 +144,13 @@ class BubbleSettingsService(private val project: Project) : PersistentStateCompo
 
     override fun loadState(state: State) {
         this.customUrl = state.customUrl
-        this.state.customUrl = state.customUrl
+        XmlSerializerUtil.copyBean(state, this.state)
+        invalidateCache()
+    }
+
+    private fun invalidateCache() {
+        cachedDefaultUrl = null
+        cachedSignature = 0
     }
 
     /**
@@ -153,28 +162,38 @@ class BubbleSettingsService(private val project: Project) : PersistentStateCompo
      *
      * If neither is found, it returns a tiny fallback HTML so the UI doesn't break.
      */
+    private fun toCssColor(c: Color): String = String.format("#%02x%02x%02x", c.red, c.green, c.blue)
+
     private fun loadBubbleHtmlWithReplacements(replacements: Map<String, String>): String {
+        val bubble = resolveHtmlToLoad()
+        val fromSpecifiedDir = state.htmlDirectory
+            ?.let { dir -> Paths.get(dir, bubble).toFile() }
+            ?.takeIf { it.isFile && it.canRead() }
+
         val fromProjectFile = project.basePath
-            ?.let { base -> Paths.get(base, "bubble.html").toFile() }
+            ?.let { base -> Paths.get(base, bubble).toFile() }
             ?.takeIf { it.isFile && it.canRead() }
 
         val rawHtml: String? = try {
             when {
-                // 1) Try project-local file
+                // 1) Try specified directory
+                fromSpecifiedDir != null -> {
+                    fromSpecifiedDir.readText(Charsets.UTF_8)
+                }
+                // 2) Try project-local file
                 fromProjectFile != null -> {
-                    // Note: this is simple blocking I/O. If you call this on the EDT, consider caching the result.
                     fromProjectFile.readText(Charsets.UTF_8)
                 }
                 else -> {
-                    // 2) Try bundled resource (ensure bubble.html is placed under src/main/resources)
-                    val resourcePath = "/bubble.html"
+                    // 3) Try bundled resource (ensure bubble.html is placed under src/main/resources)
+                    val resourcePath = "/$bubble"
                     javaClass.getResourceAsStream(resourcePath)?.use { input ->
                         input.reader(Charsets.UTF_8).readText()
                     }
                 }
             }
         } catch (e: Exception) {
-            thisLogger().warn("Failed to load bubble.html", e)
+            thisLogger().warn("Failed to load $bubble", e)
             null
         }
 
@@ -183,7 +202,7 @@ class BubbleSettingsService(private val project: Project) : PersistentStateCompo
             <meta charset="utf-8">
             <title>Bubble Units</title>
             <body>
-              <p>Could not load bubble.html</p>
+              <p>Could not load $bubble</p>
             </body>
         """.trimIndent()
 
@@ -194,9 +213,26 @@ class BubbleSettingsService(private val project: Project) : PersistentStateCompo
         }
     }
 
+    private fun resolveHtmlToLoad(): String {
+        // If development panel is enabled, prefer selected file or bubble-test.html
+        if (state.devPanelEnabled) {
+            state.selectedHtmlFile?.let { sel ->
+                return sel
+            }
+            return "bubble-test.html"
+        }
+        // Default production file
+        return "bubble.html"
+    }
+
 
 
     companion object {
+        interface SettingsListener { fun bubbleSettingsChanged() }
+        val SETTINGS_CHANGED = com.intellij.util.messages.Topic.create(
+            "BubbleUnits Settings changed",
+            SettingsListener::class.java
+        )
         @JvmStatic
         fun getInstance(project: Project): BubbleSettingsService {
             return project.service<BubbleSettingsService>()

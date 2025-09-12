@@ -5,9 +5,9 @@ import com.intellij.openapi.components.service
 import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
-import com.intellij.openapi.vfs.VirtualFileEvent
-import com.intellij.openapi.vfs.VirtualFileListener
 import com.intellij.openapi.vfs.VirtualFileManager
+import com.intellij.openapi.vfs.newvfs.BulkFileListener
+import com.intellij.openapi.vfs.newvfs.events.VFileEvent
 import com.intellij.util.messages.Topic
 
 /**
@@ -15,7 +15,7 @@ import com.intellij.util.messages.Topic
  * Properly unregisters on dispose to support dynamic plugin loading.
  */
 @Service(Service.Level.PROJECT)
-class BubbleReportWatcher(private val project: Project) : VirtualFileListener, DisposableEx {
+class BubbleReportWatcher(private val project: Project) : DisposableEx {
 
     interface Listener {
         fun junitReportChanged()
@@ -37,39 +37,33 @@ class BubbleReportWatcher(private val project: Project) : VirtualFileListener, D
 
     private fun register() {
         if (registered) return
-        VirtualFileManager.getInstance().addVirtualFileListener(this, this)
+        val connection = project.messageBus.connect(this)
+        connection.subscribe(VirtualFileManager.VFS_CHANGES, object : BulkFileListener {
+            override fun after(events: MutableList<out VFileEvent>) {
+                val base = project.basePath ?: return
+                val changed = events.any { e ->
+                    val vf = e.file
+                    if (vf != null) matchesJunit(vf) else e.path?.let { it.startsWith(base) && it.endsWith("/junit-report.xml") } == true
+                }
+                if (changed) {
+                    thisLogger().info("junit-report.xml changed; notifying listeners")
+                    project.messageBus.syncPublisher(TOPIC).junitReportChanged()
+                }
+            }
+        })
         registered = true
     }
 
-    private fun matchesJunit(file: VirtualFile?): Boolean {
+    private fun matchesJunit(file: VirtualFile): Boolean {
         val base = project.basePath ?: return false
-        if (file == null || file.isDirectory) return false
+        if (file.isDirectory) return false
         if (!file.name.equals("junit-report.xml", ignoreCase = true)) return false
         val path = file.path
         return path.startsWith(base)
     }
 
-    override fun contentsChanged(event: VirtualFileEvent) {
-        if (matchesJunit(event.file)) {
-            thisLogger().info("junit-report.xml changed; notifying listeners")
-            project.messageBus.syncPublisher(TOPIC).junitReportChanged()
-        }
-    }
-
-    override fun fileCreated(event: VirtualFileEvent) {
-        if (matchesJunit(event.file)) {
-            project.messageBus.syncPublisher(TOPIC).junitReportChanged()
-        }
-    }
-
-    override fun fileDeleted(event: VirtualFileEvent) {
-        if (matchesJunit(event.file)) {
-            project.messageBus.syncPublisher(TOPIC).junitReportChanged()
-        }
-    }
-
     override fun dispose() {
-        // Listener is registered with this as parent disposable; nothing else to do
+        // Connection is bound to this disposable
         registered = false
     }
 }

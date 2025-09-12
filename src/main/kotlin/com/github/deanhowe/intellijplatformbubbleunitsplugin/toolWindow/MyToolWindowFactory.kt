@@ -6,7 +6,6 @@ import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.wm.ToolWindow
 import com.intellij.openapi.wm.ToolWindowFactory
-import com.intellij.openapi.wm.ex.ToolWindowManagerListener
 import com.intellij.ui.content.Content
 import com.intellij.ui.content.ContentFactory
 import com.intellij.ui.content.ContentManager
@@ -36,33 +35,38 @@ class MyToolWindowFactory : ToolWindowFactory {
             // Initialize the browser
             createBrowser()
 
-            // Add a listener to detect when the tool window is shown or hidden
-            project.messageBus.connect(project).subscribe(
-                ToolWindowManagerListener.TOPIC,
-                object : ToolWindowManagerListener {
-                    override fun stateChanged() {
-                        if (toolWindow.isVisible) {
-                            // Tool window is shown, reload the browser
-                            if (browser == null) {
-                                createBrowser()
-                            } else {
-                                loadUrl()
-                            }
-                        } else {
-                            // Tool window is hidden, dispose the browser
-                            disposeBrowser()
-                        }
+            // Removed deprecated ToolWindowManagerListener.stateChanged usage.
+            // Browser is created once and remains; rely on BubbleReportWatcher to trigger reloads as needed.
+
+            // Subscribe to settings changes and junit-report.xml changes and reload the panel when it changes
+            val connection = project.messageBus.connect(project)
+            connection.subscribe(
+                BubbleSettingsService.SETTINGS_CHANGED,
+                object : BubbleSettingsService.Companion.SettingsListener {
+                    override fun bubbleSettingsChanged() {
+                        loadUrl()
                     }
                 }
             )
-
-            // Subscribe to junit-report.xml changes and reload the panel when it changes
-            project.messageBus.connect(project).subscribe(
+            connection.subscribe(
                 BubbleReportWatcher.TOPIC,
                 object : BubbleReportWatcher.Listener {
+                    private var pending = false
+                    private val debounceMs = 750L
+                    private val scheduler = java.util.concurrent.Executors.newSingleThreadScheduledExecutor()
                     override fun junitReportChanged() {
-                        // Rebuild URL (it depends on the XML content) and reload
-                        loadUrl()
+                        // Debounce rapid sequences of file changes to avoid janky reloads
+                        synchronized(this) {
+                            if (pending) return
+                            pending = true
+                        }
+                        scheduler.schedule({
+                            try {
+                                loadUrl()
+                            } finally {
+                                synchronized(this) { pending = false }
+                            }
+                        }, debounceMs, java.util.concurrent.TimeUnit.MILLISECONDS)
                     }
                 }
             )

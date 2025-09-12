@@ -14,21 +14,30 @@ The BubbleUnits plugin is a simple tool that renders a webview from a URL in a d
 The URL can be specified in the plugin's preferences, from the `BUBBLE_UNITS_URL=` variable in a `.env` file in your projects root directory, defaults to your `APP_URL=` or loads a BubbleUnits graph when a `junit-reports.xml` file is detected in your projects root directory.
 
 <!-- Plugin description -->
+BubbleUnits embeds a dedicated web panel in your IDE to visualize test results as interactive bubble charts or display any web content you choose.
 
-This plugin renders a webview of your choice in a dedicated panel.
+Designed for PHP developers using PHPUnit (or any testing framework that produces JUnit XML), it gives you immediate visual feedback on test results without leaving your IDE.
 
-No navigation, not a mini browser, just one URL rendered (and fully functional).
+**Key Features:**
+* Interactive bubble chart visualization of test results from junit-report.xml
+* Configurable to display any URL of your choice
+* Supports project-specific URLs via .env configuration
+* Toolbar with refresh and browser launch actions
+* Lightweight with minimal UI footprint
 
-The URL can be configured in three ways:
-1. Via the plugin preferences
-2. Via a `BUBBLE_UNITS_URL` variable in a `.env` file in your project directory
-3. Default fallback is to the `APP_URL` or if a `junit-report.xml` file is found in the root of the project a BubbleUnits graph is displayed. 
+**URL Configuration (in order of precedence):**
+1. Custom URL in Settings/Preferences | Tools | BubbleUnits
+2. Development panel (if enabled): render selected/bundled HTML (data URL)
+3. BUBBLE_UNITS_URL in your project's .env file
+4. APP_URL in your project's .env file
+5. Default bundled bubble.html (data URL) as fallback
 
-When showing the BubbleUnits graph
-The text content of the window/panel is editable – click on it and type away!
+To enable test visualization, add this to your test command:
+```
+--log-junit junit-report.xml
+```
 
-At the moment clicking on a bubble 
-
+No navigation controls, no browser tabs - just your test results or chosen web content, beautifully displayed in your IDE.
 <!-- Plugin description end -->
 
 ## Features
@@ -95,6 +104,10 @@ For developers who want to modify or extend this plugin:
 
 # Run the plugin in a development IDE instance
 ./gradlew runIde
+
+# Clera the cache
+./gradlew cleanBuildCache
+
 ```
 
 The `./src/main/resources/bubble.html` file is sourced/derived from my repo [PHPUnitBubble Report](https://github.com/deanhowe/phpunit-d3-report) and if you want to edit the BubbleUnit graph, you should probably check that out.
@@ -125,3 +138,32 @@ Notes:
 - Supported `platformType` codes are documented in `gradle.properties`.
 
 [^6] https://
+
+## Development panel
+
+The plugin provides a lightweight development/debug panel to iterate on HTML directly inside the IDE tool window.
+
+How to use
+- Open Settings/Preferences > Tools > BubbleUnits
+- Check “Enable development panel”
+- Choose an HTML directory (browse button supports path completion)
+- Pick an HTML file from the dropdown:
+  - Bundled defaults: bubble.html, bubble-test.html, bubble-unit-help.html
+  - A divider “— from directory —” separates any discovered .html files in your chosen directory
+- Click Apply — the BubbleUnits tool window reloads immediately (live reload on settings change)
+
+Notes
+- If the resolved URL is a data: URL, the settings field displays “<embedded data url>” instead of the very long string. Clear it to enter a real custom URL.
+- HTML lookup order when the development panel is enabled:
+  1) Selected directory (if provided)
+  2) Project root (./<file>)
+  3) Bundled resource (from the plugin)
+- URL precedence (effective order):
+  1) Custom URL in Settings (non-blank)
+  2) Development panel (renders selected/bundled HTML as a data URL)
+  3) .env — BUBBLE_UNITS_URL, otherwise APP_URL
+  4) Default bundled bubble.html as a data URL
+
+Tips
+- Use bubble-test.html to verify JetBrains theme variables (text, background, error, warning, success, info) are applied.
+- bubble-unit-help.html contains a similar style-guide style page for quick visual checks.

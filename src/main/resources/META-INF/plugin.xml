@@ -19,6 +19,6 @@
             parentId="tools" 
             instance="com.github.deanhowe.intellijplatformbubbleunitsplugin.settings.BubbleSettingsConfigurable"
             id="com.github.deanhowe.intellijplatformbubbleunitsplugin.settings.BubbleSettingsConfigurable" 
-            displayName="BubbleUnits Settings"/>
+            displayName="BubbleUnits"/>
     </extensions>
 </idea-plugin>
