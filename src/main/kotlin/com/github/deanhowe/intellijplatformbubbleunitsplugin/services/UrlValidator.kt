@@ -2,10 +2,10 @@ package com.github.deanhowe.intellijplatformbubbleunitsplugin.services
 
 import java.net.URI
 
-object UrlValidator {
+public object UrlValidator {
     private val allowedSchemes = setOf("http", "https", "file", "data")
 
-    fun isValidCustomUrl(input: String): Boolean {
+    public fun isValidCustomUrl(input: String): Boolean {
         val url = input.trim()
         if (url.isEmpty()) return true // blank is allowed (means use precedence fallbacks)
         if (url.startsWith("javascript:", ignoreCase = true)) return false

@@ -4,15 +4,25 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Bubble Units Style Guide</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVQYV2NgYAAAAAMAAWgmWQ0AAAAASUVORK5CYII=">
   <style>
     :root{
-      --color-text: {{textColour}};
       --color-bg: {{BGColour}};
+      --color-text: {{textColour}};
       --color-error: {{errorColour}};
       --color-warning: {{warningColour}};
-      --color-failed: {{warningColour}};
+      --color-failed: {{failedColour}};
       --color-success: {{successColour}};
       --color-info: {{infoColour}};
+      /* PSR-3 log level colors derived from theme */
+      --psr3-emergency: {{psr3Emergency}};
+      --psr3-alert: {{psr3Alert}};
+      --psr3-critical: {{psr3Critical}};
+      --psr3-error: {{psr3Error}};
+      --psr3-warning: {{psr3Warning}};
+      --psr3-notice: {{psr3Notice}};
+      --psr3-info: {{psr3Info}};
+      --psr3-debug: {{psr3Debug}};
     }
 
     html, body { height: 100%; }
@@ -48,6 +58,7 @@
     /* Demonstration components wired to CSS vars */
     .alert { padding: 10px 12px; border-radius: 8px; border: 1px solid; margin: 6px 0; }
     .alert.error { color: var(--color-error); border-color: var(--color-error); }
+    .alert.failed { color: var(--color-failed); border-color: var(--color-failed); }
     .alert.warning { color: var(--color-warning); border-color: var(--color-warning); }
     .alert.success { color: var(--color-success); border-color: var(--color-success); }
     .alert.info { color: var(--color-info); border-color: var(--color-info); }
@@ -84,11 +95,25 @@
       <div class="swatch">
         <div class="h1" style="margin-bottom:10px;">Status colors</div>
         <div class="legend">
-          <div class="item"><div class="chip" style="background: var(--color-success);"></div><span class="kv">--color-success: {{successColour}}</span></div>
-          <div class="item"><div class="chip" style="background: var(--color-warning);"></div><span class="kv">--color-warning: {{warningColour}}</span></div>
-          <div class="item"><div class="chip" style="background: var(--color-failed);"></div><span class="kv">--color-failed: {{warningColour}}</span></div>
-          <div class="item"><div class="chip" style="background: var(--color-error);"></div><span class="kv">--color-error: {{errorColour}}</span></div>
-          <div class="item"><div class="chip" style="background: var(--color-info);"></div><span class="kv">--color-info: {{infoColour}}</span></div>
+          <div class="item"><div class="chip" style="background: var(--color-success);"></div><br><span class="kv" >success: {{successColour}}</span></div>
+          <div class="item"><div class="chip" style="background: var(--color-warning);"></div><br><span class="kv" >warning: {{warningColour}}</span></div>
+          <div class="item"><div class="chip" style="background: var(--color-failed);"></div><br><span class="kv">failed: {{failedColour}}</span></div>
+          <div class="item"><div class="chip" style="background: var(--color-error);"></div><br><span class="kv">error: {{errorColour}}</span></div>
+          <div class="item"><div class="chip" style="background: var(--color-info);"></div><br><span class="kv">info: {{infoColour}}</span></div>
+        </div>
+      </div>
+
+      <div class="swatch">
+        <div class="h1" style="margin-bottom:10px;">PSR-3 log level colors (from current IDE theme)</div>
+        <div class="legend" style="grid-template-columns: repeat(4, minmax(0,1fr));">
+          <div class="item"><div class="chip" style="background: var(--psr3-emergency);"></div><span class="kv">emergency: {{psr3Emergency}}</span></div>
+          <div class="item"><div class="chip" style="background: var(--psr3-alert);"></div><span class="kv">alert: {{psr3Alert}}</span></div>
+          <div class="item"><div class="chip" style="background: var(--psr3-critical);"></div><span class="kv">critical: {{psr3Critical}}</span></div>
+          <div class="item"><div class="chip" style="background: var(--psr3-error);"></div><span class="kv">error: {{psr3Error}}</span></div>
+          <div class="item"><div class="chip" style="background: var(--psr3-warning);"></div><span class="kv">warning: {{psr3Warning}}</span></div>
+          <div class="item"><div class="chip" style="background: var(--psr3-notice);"></div><span class="kv">notice: {{psr3Notice}}</span></div>
+          <div class="item"><div class="chip" style="background: var(--psr3-info);"></div><span class="kv">info: {{psr3Info}}</span></div>
+          <div class="item"><div class="chip" style="background: var(--psr3-debug);"></div><span class="kv">debug: {{psr3Debug}}</span></div>
         </div>
       </div>
     </div>
@@ -98,12 +123,14 @@
       <p>This section previews how the CSS variables affect simple UI components.</p>
       <div class="alert success">Success message using var(--color-success)</div>
       <div class="alert warning">Warning message using var(--color-warning)</div>
+      <div class="alert failed">Failed message using var(--color-failed)</div>
       <div class="alert error">Error message using var(--color-error)</div>
       <div class="alert info">Info message using var(--color-info)</div>
 
       <div class="btns" style="margin-top:10px;">
         <button class="btn" style="color: var(--color-success);">Success</button>
         <button class="btn" style="color: var(--color-warning);">Warning</button>
+        <button class="btn" style="color: var(--color-failed);">Failed</button>
         <button class="btn" style="color: var(--color-error);">Error</button>
         <button class="btn" style="color: var(--color-info);">Info</button>
         <button class="btn">Text (inherits --color-text)</button>
@@ -113,6 +140,38 @@
     <div class="sample" style="margin-top:18px;">
       <div class="h1">Computed values</div>
       <p class="kv">text: <span id="v-text"></span> | bg: <span id="v-bg"></span> | success: <span id="v-success"></span> | warning: <span id="v-warning"></span> | failed: <span id="v-failed"></span> | error: <span id="v-error"></span> | info: <span id="v-info"></span></p>
+    </div>
+
+    <div class="sample" id="export-bridge" style="margin-top:18px;">
+      <div class="h1">Export bridge test</div>
+      <p>Use the buttons below to export sample content via the IDE bridge. The plugin should save files into your Bubble Units snapshot directory and show a notification.</p>
+      <div id="bubbles" style="background: #fff; border-radius: 8px; padding: 8px;">
+        <svg width="360" height="150" viewBox="0 0 360 150" xmlns="http://www.w3.org/2000/svg">
+          <circle class="success" cx="50" cy="75" r="24" />
+          <circle class="failed" cx="130" cy="75" r="24" />
+          <circle class="error" cx="210" cy="75" r="24" />
+          <circle class="skipped" cx="290" cy="75" r="24" />
+        </svg>
+      </div>
+      <div class="btns" style="margin-top:10px;">
+        <a href="#" class="btn" id="svg_download_link">&lt;SVG&gt;</a>
+        <a href="#" class="btn" id="json_report_download_link">{JSON}</a>
+        <a href="#" class="btn" id="png_download_link">.PNG</a>
+        <button class="btn" id="notify_test_link" onclick="try{
+          // Try all possible notification channels
+          if (window.__bubble && typeof window.__bubble.notify === 'function') {
+            window.__bubble.notify('Notification test via __bubble.notify');
+            console.info('Sent notification via window.__bubble.notify');
+          } else if (typeof window.__bubbleNotify === 'function') {
+            window.__bubbleNotify('Notification test via __bubbleNotify');
+            console.info('Sent notification via window.__bubbleNotify');
+          } else {
+            console.error('No notification function available');
+            alert('No notification bridge available');
+          }
+        }catch(e){console.error(e);}">Notify</button>
+      </div>
+      <p class="kv muted">Tip: If clicking does nothing, click the Reload button in the tool window toolbar to reinject the bridge.</p>
     </div>
   </div>
 

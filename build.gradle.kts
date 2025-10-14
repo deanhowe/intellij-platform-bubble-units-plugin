@@ -1,6 +1,10 @@
 import org.jetbrains.changelog.Changelog
 import org.jetbrains.changelog.markdownToHTML
 import org.jetbrains.intellij.platform.gradle.TestFrameworkType
+import java.io.File
+import org.w3c.dom.Element
+
+val projectDirPath = project.projectDir.absolutePath
 
 plugins {
     id("java") // Java support
@@ -9,6 +13,8 @@ plugins {
     alias(libs.plugins.changelog) // Gradle Changelog Plugin
     alias(libs.plugins.qodana) // Gradle Qodana Plugin
     alias(libs.plugins.kover) // Gradle Kover Plugin
+    id("io.gitlab.arturbosch.detekt") version "1.23.7" // Kotlin static analysis (Detekt)
+    id("com.github.node-gradle.node") version "7.0.1" // Node Support
 }
 
 group = providers.gradleProperty("pluginGroup").get()
@@ -17,6 +23,13 @@ version = providers.gradleProperty("pluginVersion").get()
 // Set the JVM language level used to build the project.
 kotlin {
     jvmToolchain(21)
+}
+
+node {
+    // Ensures CI/local builds don’t rely on a preinstalled Node
+    download.set(true)
+    version.set("22.12.0") // pick a specific, tested Node.js version
+    // npmVersion can be set too if needed
 }
 
 // Configure project's dependencies
@@ -33,6 +46,9 @@ repositories {
 dependencies {
     testImplementation(libs.junit)
     testImplementation(libs.opentest4j)
+
+    // Detekt formatting rules
+    detektPlugins("io.gitlab.arturbosch.detekt:detekt-formatting:1.23.7")
 
     // IntelliJ Platform Gradle Plugin Dependencies Extension - read more: https://plugins.jetbrains.com/docs/intellij/tools-intellij-platform-gradle-plugin-dependencies-extension.html
     intellijPlatform {
@@ -126,6 +142,23 @@ kover {
     }
 }
 
+// Configure Detekt - Kotlin static analysis
+detekt {
+    buildUponDefaultConfig = true
+    allRules = false
+    config.setFrom(files("detekt.yml"))
+    baseline = file("detekt-baseline.xml")
+}
+
+tasks.withType<io.gitlab.arturbosch.detekt.Detekt> {
+    jvmTarget = "21"
+    // Adopt gradually: report but don't fail the build initially
+    ignoreFailures = true
+}
+
+// Make detekt part of the standard check lifecycle
+tasks.named("check") { dependsOn("detekt") }
+
 tasks {
     wrapper {
         gradleVersion = providers.gradleProperty("gradleVersion").get()
@@ -135,9 +168,133 @@ tasks {
         dependsOn(patchChangelog)
     }
 
+    // Merge Gradle's per-class JUnit XML reports into a single junit-report.xml at project root
+    val mergeJUnitReports by registering {
+        group = "verification"
+        description = "Merge Gradle test XML reports into a single junit-report.xml at project root for BubbleUnits"
+        notCompatibleWithConfigurationCache("Simple XML merge script uses non-CC-safe references")
+        inputs.dir(layout.buildDirectory.dir("test-results"))
+        outputs.file(layout.projectDirectory.file("junit-report.xml"))
+
+        doLast {
+            val resultsRoot = File("$projectDirPath/build/test-results")
+            val targetFile = File("$projectDirPath/junit-report.xml")
+
+            val factory = javax.xml.parsers.DocumentBuilderFactory.newInstance()
+            factory.isNamespaceAware = false
+            val builder = factory.newDocumentBuilder()
+            val master = builder.newDocument()
+            val root = master.createElement("testsuites")
+            master.appendChild(root)
+
+            var totalTests = 0
+            var totalFailures = 0
+            var totalErrors = 0
+            var totalSkipped = 0
+            var totalTime = 0.0
+
+            val xmlFiles = if (resultsRoot.exists()) {
+                resultsRoot.walkTopDown().filter { it.isFile && it.name.endsWith(".xml") }.toList()
+            } else {
+                emptyList()
+            }
+
+            xmlFiles.forEach { f ->
+                try {
+                    val doc = builder.parse(f)
+                    val elem = doc.documentElement
+
+                    fun importSuite(suiteElem: Element) {
+                        fun getInt(name: String) = suiteElem.getAttribute(name).toIntOrNull() ?: 0
+                        fun getDouble(name: String) = suiteElem.getAttribute(name).toDoubleOrNull() ?: 0.0
+                        totalTests += getInt("tests")
+                        totalFailures += getInt("failures")
+                        totalErrors += getInt("errors")
+                        totalSkipped += (getInt("skipped") + getInt("ignored"))
+                        totalTime += getDouble("time")
+                        val imported = master.importNode(suiteElem, true)
+                        root.appendChild(imported)
+                    }
+
+                    when (elem.tagName) {
+                        "testsuite" -> importSuite(elem)
+                        "testsuites" -> {
+                            val children = elem.getElementsByTagName("testsuite")
+                            for (i in 0 until children.length) {
+                                importSuite(children.item(i) as Element)
+                            }
+                        }
+                        else -> {
+                            // ignore other roots
+                        }
+                    }
+                } catch (e: Exception) {
+                    logger.warn("Failed to merge test report ${f.name}: ${e.message}")
+                }
+            }
+
+            root.setAttribute("tests", totalTests.toString())
+            root.setAttribute("failures", totalFailures.toString())
+            root.setAttribute("errors", totalErrors.toString())
+            root.setAttribute("skipped", totalSkipped.toString())
+            root.setAttribute("time", "%.3f".format(totalTime))
+
+            val tf = javax.xml.transform.TransformerFactory.newInstance().newTransformer()
+            tf.setOutputProperty(javax.xml.transform.OutputKeys.INDENT, "yes")
+            tf.transform(javax.xml.transform.dom.DOMSource(master), javax.xml.transform.stream.StreamResult(targetFile))
+
+            if (xmlFiles.isEmpty()) {
+                logger.lifecycle("No test result XMLs found under $resultsRoot; wrote empty ${targetFile.path}")
+            } else {
+                logger.lifecycle("Merged ${xmlFiles.size} test result file(s) into ${targetFile.path}")
+            }
+        }
+    }
+
     test {
         systemProperty("java.util.logging.config.file", "${project.projectDir}/src/test/resources/test-log.properties")
+        // Ensure JUnit XML and HTML reports are generated (useful for CI/test result export)
+        reports {
+            junitXml.required.set(true)
+            html.required.set(true)
+        }
+        finalizedBy(named("mergeJUnitReports"))
     }
+}
+
+val npmCi by tasks.registering(com.github.gradle.node.npm.task.NpmTask::class) {
+    description = "Install frontend dependencies using npm ci"
+    workingDir.set(file("web"))
+    args.set(listOf("ci"))
+}
+
+val npmBuild by tasks.registering(com.github.gradle.node.npm.task.NpmTask::class) {
+    description = "Build frontend assets"
+    dependsOn(npmCi)
+    workingDir.set(file("web"))
+    args.set(listOf("run", "build"))
+}
+
+// Copy the Vite-produced PHPUnitBubbleReport.html into plugin resources as web/bubble.html
+val renderPhpUnitBubbleReportToResources by tasks.registering(Copy::class) {
+    description = "Export Vite output (PHPUnitBubbleReport.html) into resources/web as bubble.html"
+    dependsOn(npmBuild)
+    from("web/dist/PHPUnitBubbleReport.html")
+    rename { "bubble.html" }
+    into("src/main/resources/web")
+}
+
+tasks.named<ProcessResources>("processResources") {
+    // Ensure the HTML is generated and copied into resources during builds
+    dependsOn(renderPhpUnitBubbleReportToResources)
+}
+
+// Optional: ensure assemble/buildPlugin also trigger frontend build
+tasks.named("assemble") { dependsOn("processResources") }
+
+// Ensure runIde generates and copies the HTML before launching the IDE
+tasks.matching { it.name == "runIde" }.configureEach {
+    dependsOn(renderPhpUnitBubbleReportToResources)
 }
 
 intellijPlatformTesting {

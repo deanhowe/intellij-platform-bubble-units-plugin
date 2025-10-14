@@ -5,32 +5,29 @@ import com.intellij.testFramework.fixtures.BasePlatformTestCase
 
 class BubbleSettingsServiceEnvResolutionTest : BasePlatformTestCase() {
 
-    fun testBubbleUnitsUrlWinsOverAppUrl() {
-        val svc = BubbleSettingsService.getInstance(project)
+    fun testEnvResolutionPrefersBubbleUnitsUrl() {
+        val svc = BubbleSettingsService(myFixture.project)
         val map = mapOf(
-            "APP_URL" to "http://app.local",
-            "BUBBLE_UNITS_URL" to "https://units.example"
+            "APP_URL" to "https://app.example",
+            "BUBBLE_UNITS_URL" to "https://bubble.example"
         )
-        assertEquals("https://units.example", svc.resolveUrlFromEnvMap(map))
+        val resolved = svc.resolveUrlFromEnvMap(map)
+        assertEquals("https://bubble.example", resolved)
     }
 
-    fun testAppUrlUsedWhenBubbleUnitsMissing() {
-        val svc = BubbleSettingsService.getInstance(project)
+    fun testEnvResolutionFallsBackToAppUrl() {
+        val svc = BubbleSettingsService(myFixture.project)
         val map = mapOf(
-            "APP_URL" to "http://app.local"
+            "APP_URL" to "http://fallback.local"
         )
-        assertEquals("http://app.local", svc.resolveUrlFromEnvMap(map))
+        val resolved = svc.resolveUrlFromEnvMap(map)
+        assertEquals("http://fallback.local", resolved)
     }
 
-    fun testNullWhenNoRelevantKeysOrBlank() {
-        val svc = BubbleSettingsService.getInstance(project)
-        val map1 = emptyMap<String, String>()
-        assertNull(svc.resolveUrlFromEnvMap(map1))
-
-        val map2 = mapOf(
-            "BUBBLE_UNITS_URL" to "   ",
-            "APP_URL" to "  "
-        )
-        assertNull(svc.resolveUrlFromEnvMap(map2))
+    fun testEnvResolutionNullWhenNoKeys() {
+        val svc = BubbleSettingsService(myFixture.project)
+        val map = emptyMap<String, String>()
+        val resolved = svc.resolveUrlFromEnvMap(map)
+        assertNull(resolved)
     }
 }

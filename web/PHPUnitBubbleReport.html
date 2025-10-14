@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>PHPUnit Bubble Report</title>
+
+    <link rel="icon" type="image/png" sizes="32x32" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVQYV2NgYAAAAAMAAWgmWQ0AAAAASUVORK5CYII=">
+
+    <style>
+        :root {
+            --color-bg: {{BGColour}};
+            --color-text: {{textColour}};
+            --color-error: {{errorColour}};
+            --color-failed: {{failedColour}};
+            --color-warning: {{warningColour}};
+            --color-success: {{successColour}};
+            --color-info: {{infoColour}};
+        }
+
+    .bubbles circle.success {
+        fill: var(--color-success);
+    }
+    .bubbles circle.failed {
+        fill: var(--color-failed);
+    }
+    .bubbles circle.errored {
+        fill: var(--color-error);
+    }
+    .bubbles circle.skipped, .fill-skipped {
+        fill: var(--color-warning);
+    }
+    </style>
+</head>
+<body class="pt-8">
+<div class="flex justify-center mb-24">
+
+    <div class="container">
+
+<!--        <div class="prose mx-auto mb-12">-->
+<!--        These areas are/were useful during testing please leave them here for future reference-->
+<!--            <h1 class="text-center"><span contenteditable="true">-->
+<!--                {{BUBBLE_UNITS_PROJECT_NAME}}-->
+<!--                </span>-->
+<!--            </h1>-->
+<!--            <p class="text-3xl"><span contenteditable="true">-->
+<!--                {{BUBBLE_UNITS_INTRO}}-->
+<!--                </span>-->
+<!--            </p>-->
+<!--            <p class="text-xl"><span contenteditable="true">-->
+<!--                {{BUBBLE_UNITS_DESCRIPTION}} {{errorColour}} {{warningColour}} {{successColour}}-->
+<!--                </span>-->
+<!--            </p>-->
+<!--            <div class="grid grid-cols-5">-->
+<!--                <div style="background-color: var(&#45;&#45;color-error)">{{errorColour}}</div>-->
+<!--                <div style="background-color: var(&#45;&#45;color-failed)">{{errorColour}}</div>-->
+<!--                <div style="background-color: var(&#45;&#45;color-warning)">{{warningColour}}</div>-->
+<!--                <div style="background-color: var(&#45;&#45;color-info)">{{infoColour}}</div>-->
+<!--                <div style="background-color: var(&#45;&#45;color-success)">{{successColour}}</div>-->
+<!--            </div>-->
+<!--        </div>-->
+
+        <div id="app"></div>
+
+    </div>
+</div>
+<script>
+    // const BUBBLE_UNIT_JSON_URL={{ $name }}
+</script>
+<script defer type="module" src="/src/main.js"></script>
+</body>
+</html>

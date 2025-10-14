@@ -29,42 +29,58 @@ class BubbleReportWatcher(private val project: Project) : DisposableEx {
         fun getInstance(project: Project): BubbleReportWatcher = project.service()
     }
 
-    private var registered = false
-
     init {
-        register()
-    }
-
-    private fun register() {
-        if (registered) return
+        // Subscribe once; the connection is bound to this service's Disposable (no manual flags needed)
         val connection = project.messageBus.connect(this)
         connection.subscribe(VirtualFileManager.VFS_CHANGES, object : BulkFileListener {
             override fun after(events: MutableList<out VFileEvent>) {
-                val base = project.basePath ?: return
+                val envPathAbs = try {
+                    BubbleSettingsService.getInstance(project).resolveJunitPathFromEnv()
+                } catch (_: Exception) { null }
                 val changed = events.any { e ->
                     val vf = e.file
-                    if (vf != null) matchesJunit(vf) else e.path?.let { it.startsWith(base) && it.endsWith("/junit-report.xml") } == true
+                    if (vf != null) {
+                        matchesJunit(vf, envPathAbs)
+                    } else {
+                        val p = e.path ?: return@any false
+                        if (envPathAbs != null && p.equals(envPathAbs, ignoreCase = false)) return@any true
+                        val name = p.substringAfterLast('/')
+                        isJunitName(name)
+                    }
                 }
                 if (changed) {
-                    thisLogger().info("junit-report.xml changed; notifying listeners")
+                    com.github.deanhowe.intellijplatformbubbleunitsplugin.util.Logging.info(
+                        project,
+                        BubbleReportWatcher::class.java,
+                        "JUnit report change detected; notifying listeners"
+                    )
                     project.messageBus.syncPublisher(TOPIC).junitReportChanged()
                 }
             }
         })
-        registered = true
     }
 
-    private fun matchesJunit(file: VirtualFile): Boolean {
-        val base = project.basePath ?: return false
+    private fun matchesJunit(file: VirtualFile, envPathAbs: String?): Boolean {
         if (file.isDirectory) return false
-        if (!file.name.equals("junit-report.xml", ignoreCase = true)) return false
-        val path = file.path
-        return path.startsWith(base)
+        // If explicit .env path is configured, accept exact path match regardless of content root/exclusion
+        if (!envPathAbs.isNullOrEmpty() && file.path == envPathAbs) return true
+        if (!isJunitName(file.name)) return false
+        val index = com.intellij.openapi.roots.ProjectFileIndex.getInstance(project)
+        return index.isInContent(file)
+    }
+
+    private fun isJunitName(name: String): Boolean {
+        if (name.equals("report.junit.xml", ignoreCase = true)) return true
+        if (name.equals("junit-report.xml", ignoreCase = true)) return true
+        if (name.equals("junit.xml", ignoreCase = true)) return true
+        if (name.equals("TESTS-TestSuites.xml", ignoreCase = true)) return true
+        if (name.equals("TEST-results.xml", ignoreCase = true)) return true
+        if (Regex("""TEST-.*\.xml""").matches(name)) return true
+        return false
     }
 
     override fun dispose() {
-        // Connection is bound to this disposable
-        registered = false
+        // No-op: the message bus connection is tied to this Disposable
     }
 }
 

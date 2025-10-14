@@ -23,12 +23,21 @@ fun attachConsoleLogger(browser: JBCefBrowser, log: Logger) {
         ): Boolean {
             val lvlEnum = level ?: CefSettings.LogSeverity.LOGSEVERITY_INFO
             val lvl = lvlEnum.toString()
-            val text = "[JCEF Console][$lvl] ${'$'}message (${'$'}source:${'$'}line)"
+            val safeMsg = run {
+                val m = (message ?: "").trim()
+                val limit = 2000
+                if (m.length > limit) m.substring(0, limit) + "…" else m
+            }
+            val safeSrc = run {
+                val s = source ?: ""
+                if (s.startsWith("data:")) "data:(...)" else s
+            }
+            val text = "[JCEF Console][$lvl] $safeMsg ($safeSrc:$line)"
             when (lvlEnum) {
                 CefSettings.LogSeverity.LOGSEVERITY_ERROR,
-                CefSettings.LogSeverity.LOGSEVERITY_FATAL -> log.error(text)
+                CefSettings.LogSeverity.LOGSEVERITY_FATAL -> log.warn(text) // avoid Throwable-backed IDE SEVERE logs
                 CefSettings.LogSeverity.LOGSEVERITY_WARNING -> log.warn(text)
-                else -> log.info(text)
+                else -> log.info(text) // Log all console messages to help diagnose bridge/export issues
             }
             return false // allow default handling too
         }

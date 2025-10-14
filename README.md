@@ -1,7 +1,5 @@
 # BubbleUnits Plugin for IntelliJ Platform
 
-> [!CAUTION]
-> This plugin is not ready for public consumption – yet.
 
 ![Build](https://github.com/deanhowe/intellij-platform-bubble-units-plugin/workflows/Build/badge.svg)
 [![Version](https://img.shields.io/jetbrains/plugin/v/28293-bubble-units.svg)](https://plugins.jetbrains.com/plugin/28293-bubble-units)
@@ -86,6 +84,10 @@ https://github.com/deanhowe/intellij-platform-bubble-units-plugin
    - Create a file named `.env` in the root directory of your project
    - Add a line with the format: `BUBBLE_UNITS_URL=https://<your-url-here>`
    - The plugin will automatically detect and use this URL if no custom URL is set in the settings
+- To override the JUnit XML report location via `.env` (useful for dogfooding this plugin in this repo or custom setups):
+   - Add `BUBBLE_UNITS_JUNIT_PATH=build/test-results/test/TEST-*.xml` (use a concrete file path) or an alias key `JUNIT_XML_PATH=...`
+   - Relative paths are resolved against the project root; absolute paths are supported
+   - The specified file is monitored for changes even if it’s outside the project content roots/excluded folders
 - Open the Bubble Units tool window to view the web content or BubbleUnits graph
 
 ## Development
@@ -105,12 +107,12 @@ For developers who want to modify or extend this plugin:
 # Run the plugin in a development IDE instance
 ./gradlew runIde
 
-# Clera the cache
+# Clear the cache
 ./gradlew cleanBuildCache
 
 ```
 
-The `./src/main/resources/bubble.html` file is sourced/derived from my repo [PHPUnitBubble Report](https://github.com/deanhowe/phpunit-d3-report) and if you want to edit the BubbleUnit graph, you should probably check that out.
+The `./src/main/resources/web/bubble.html` file is sourced/derived from my repo [PHPUnitBubble Report](https://github.com/deanhowe/phpunit-d3-report) and if you want to edit the BubbleUnit graph, you should probably check that out.
 
 ## Contributing
 
@@ -123,7 +125,7 @@ Plugin based on the [IntelliJ Platform Plugin Template](https://github.com/JetBr
 
 ## Run with different IDEs for development
 
-By default, `./gradlew runIde` launches IntelliJ IDEA Community (IC) version 2024.3.6, as configured in `gradle.properties`.
+By default, `./gradlew runIde` launches PhpStorm (PS) version 2025.2, as configured in `gradle.properties`.
 You can switch the IDE (and version) at runtime via Gradle properties without changing files:
 
 - IntelliJ IDEA Ultimate:
@@ -136,8 +138,6 @@ Notes:
 - The first run will download the selected IDE into Gradle caches; subsequent runs are faster.
 - Ensure your plugin dependencies are compatible with the chosen IDE and version. If you need IDE-specific bundled plugins, set `platformBundledPlugins` in `gradle.properties` accordingly.
 - Supported `platformType` codes are documented in `gradle.properties`.
-
-[^6] https://
 
 ## Development panel
 
@@ -167,3 +167,70 @@ Notes
 Tips
 - Use bubble-test.html to verify JetBrains theme variables (text, background, error, warning, success, info) are applied.
 - bubble-unit-help.html contains a similar style-guide style page for quick visual checks.
+
+
+## Test logging (for running tests)
+
+Tests in this project use JUL (java.util.logging). Gradle is configured to point tests at src/test/resources/test-log.properties automatically:
+
+- In build.gradle.kts: tasks.test { systemProperty("java.util.logging.config.file", "${project.projectDir}/src/test/resources/test-log.properties") }
+
+You don’t need to copy any files; just run:
+
+- ./gradlew test
+- ./gradlew test --tests "com.github.deanhowe.intellijplatformbubbleunitsplugin.MyBundleTest.testMessageFormatting"
+
+See .junie/guidelines.md for details.
+
+## JUnit XML test reports
+
+Gradle is configured to export test results in JUnit XML format.
+
+- Run tests: `./gradlew test`
+- XML results: `build/test-results/test/*.xml`
+- HTML report: `build/reports/tests/test/index.html`
+
+These reports are useful for CI systems that consume JUnit XML artifacts.
+
+## Troubleshooting
+
+- JCEF not available: If you’re running in a headless environment or JCEF is disabled, the tool window will display a message and won’t render the embedded page. Use the toolbar action “Open in Browser” to open the resolved URL in your default browser.
+- URL resolution order: Custom URL (Settings) > Development panel (data URL) > .env (BUBBLE_UNITS_URL, then APP_URL) > default bundled bubble.html. Use the “Reset to default” and “Test URL” buttons in Settings to verify inputs.
+- Errors in Event Log: When content cannot be resolved, an error notification is posted to the IDE Event Log (Notification group: “BubbleUnits”). Also check IDEA logs for messages containing “BubbleUnits”.
+
+### Known benign IDE warnings during runIde
+
+These messages can appear in the IDE log when launching the development IDE via `./gradlew runIde`. They are not caused by BubbleUnits and can be safely ignored in development:
+
+- No URL bundle (CFBundleURLTypes) is defined in the main bundle. To be able to open external links, specify protocols in the app layout section of the build file. Example: args.urlSchemes = ["your-protocol"]
+  - Explanation: This applies to packaging a standalone macOS app and cannot be configured by an IntelliJ plugin. BubbleUnits opens external links with standard http/https/file URLs using the IDE’s BrowserUtil; no custom URL scheme is required.
+- resource not found: colorSchemes/DqlAddonsDefault.xml and colorSchemes/DqlAddonsDarcula.xml
+  - Explanation: Emitted by the IDE’s EditorColorsManager when a different installed plugin (e.g., DQL Addons) declares schemes that are not present for the current IDE. BubbleUnits does not register any color schemes.
+- `preload=NOT_HEADLESS`/`preload=TRUE` must be used only for core services (Code With Me related)
+  - Explanation: Logged by bundled JetBrains plugins in development IDE builds; unrelated to BubbleUnits functionality.
+
+
+## Privacy
+
+- No telemetry is collected or sent. The plugin operates locally within your IDE.
+- The plugin may read the following files from your project when resolving content:
+  - `.env` (keys: `BUBBLE_UNITS_URL`, `APP_URL`, optional `BUBBLE_UNITS_JUNIT_PATH` / `JUNIT_XML_PATH`)
+  - `junit-report.xml` (or another configured JUnit XML path) for visualization
+- Network requests are only made to the configured URL when the tool window is active; the plugin does not fetch remote content at IDE startup.
+
+## Links
+
+- JetBrains Marketplace: https://plugins.jetbrains.com/plugin/28293-bubble-units
+- Issue tracker: https://github.com/deanhowe/intellij-platform-bubble-units-plugin/issues
+- Documentation:
+  - Release checklist: docs/release-checklist.md
+  - Marketplace tasks: docs/market-place-tasks.md
+  - Troubleshooting: docs/troubleshooting.md
+
+
+### Snapshot exports (SVG/PNG/JSON)
+
+- Where files are saved: By default, exports are written into a hidden folder in your project root: `./.bubble-unit-snapshots/`.
+- After you click one of the export buttons, the IDE shows a notification with the absolute path to the saved file.
+- If the embedded page can’t export (e.g., the bridge isn’t ready or there’s no SVG yet), BubbleUnits now shows a balloon with guidance instead of failing silently.
+- You can change the snapshot directory in Settings/Preferences | Tools | BubbleUnits.

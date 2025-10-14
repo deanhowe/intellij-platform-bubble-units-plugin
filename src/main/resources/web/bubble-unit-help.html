@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>BubbleUnits Help</title>
+  <style>
+    :root {
+      --color-text: {{textColour}};
+      --color-bg: {{BGColour}};
+      --color-error: {{errorColour}};
+      --color-warning: {{warningColour}};
+      --color-success: {{successColour}};
+      --color-info: {{infoColour}};
+    }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, Noto Sans, "Apple Color Emoji", "Segoe UI Emoji";
+      background: var(--color-bg);
+      color: var(--color-text);
+      line-height: 1.55;
+    }
+    .wrap { max-width: 960px; margin: 0 auto; padding: 20px 16px 40px; }
+    h1 { font-size: 26px; margin: 12px 0 8px; }
+    h2 { font-size: 18px; margin: 22px 0 8px; }
+    p { margin: 8px 0; }
+    code, pre, .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; font-size: 12.5px; }
+    pre { background: rgba(127,127,127,0.07); border: 1px solid rgba(127,127,127,0.25); border-radius: 6px; padding: 10px; overflow-x: auto; }
+    .note { opacity: .85; }
+    .box { background: rgba(127,127,127,0.07); border: 1px solid rgba(127,127,127,0.25); border-radius: 8px; padding: 12px; }
+    .kv { display: grid; grid-template-columns: 180px 1fr; gap: 6px 12px; }
+    .kv div:first-child { opacity: .9; }
+    .legend { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
+    .chip { width: 16px; height: 16px; border-radius: 4px; border: 1px solid rgba(0,0,0,.15); display: inline-block; vertical-align: -2px; }
+    a { color: var(--color-info); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <h1>BubbleUnits Help</h1>
+  <p class="note">Project: <strong>{{BUBBLE_UNITS_PROJECT_NAME}}</strong></p>
+
+  <h2>What is shown in the tool window?</h2>
+  <p>
+    BubbleUnits renders either a web page of your choice or an embedded visualization of JUnit XML results
+    (useful for PHPUnit and other frameworks that can emit JUnit). The resolved URL/content is chosen using the
+    precedence below.
+  </p>
+
+  <h2>URL precedence (highest to lowest)</h2>
+  <ol>
+    <li>Custom URL set in Settings/Preferences → Tools → BubbleUnits</li>
+    <li>Development panel (when enabled): render selected/bundled HTML as a data: URL</li>
+    <li>.env file in the project root:
+      <ul>
+        <li><span class="mono">BUBBLE_UNITS_URL</span></li>
+        <li>otherwise <span class="mono">APP_URL</span></li>
+      </ul>
+    </li>
+    <li>Default bundled bubble.html (embedded)</li>
+  </ol>
+
+  <h2>.env variables you can use</h2>
+  <div class="box">
+    <div class="kv mono">
+      <div>BUBBLE_UNITS_URL</div>
+      <div>Primary URL to load in the tool window (e.g. https://bubbles.example)</div>
+      <div>APP_URL</div>
+      <div>Fallback URL if BUBBLE_UNITS_URL is not provided</div>
+      <div>BUBBLE_UNITS_JUNIT_PATH</div>
+      <div>Absolute or project‑relative path to a JUnit XML file to visualize</div>
+      <div>JUNIT_XML_PATH</div>
+      <div>Alias for BUBBLE_UNITS_JUNIT_PATH</div>
+    </div>
+  </div>
+  <p class="note">Relative paths are resolved against your project root. The specified JUnit XML file is monitored for changes (even if it is outside content roots).</p>
+
+  <h2>Examples</h2>
+  <pre>.env
+BUBBLE_UNITS_URL=https://bubbles.laravel.cloud
+# or
+APP_URL=http://localhost:3000
+
+# point the visualization at a concrete junit xml file
+BUBBLE_UNITS_JUNIT_PATH=build/test-results/test/TEST-com.example.MyTest.xml
+# alias
+JUNIT_XML_PATH=reports/junit.xml
+</pre>
+
+  <h2>Development panel</h2>
+  <ol>
+    <li>Open Settings/Preferences → Tools → BubbleUnits</li>
+    <li>Enable “Development panel”</li>
+    <li>Pick an HTML directory and select a file from the dropdown (or use bundled: bubble.html, bubble-test.html, bubble-unit-help.html)</li>
+    <li>Click Apply — the tool window reloads immediately</li>
+  </ol>
+  <p class="note">When the resolved content is a data: URL, the settings field shows “&lt;embedded data url&gt;”. Clear it to type a real URL.</p>
+
+  <h2>Toolbar actions</h2>
+  <ul>
+    <li><strong>Refresh</strong>: Reload the current content in the tool window.</li>
+    <li><strong>Open in Browser</strong>: Open the resolved URL/content in your system browser.</li>
+    <li><strong>Configure</strong>: Jump to Settings/Preferences → Tools → BubbleUnits.</li>
+  </ul>
+
+  <h2>Current values (for reference)</h2>
+  <div class="box mono">
+    <div class="kv">
+      <div>Project base path</div><div>{{PROJECT_BASE_PATH}}</div>
+      <div>JUnit XML path</div><div>{{JUNIT_PATH}}</div>
+    </div>
+  </div>
+
+  <h2>Troubleshooting</h2>
+  <ul>
+    <li>If JCEF is not available (headless or disabled), the tool window shows a message. Use “Open in Browser” from the toolbar.</li>
+    <li>Errors are also posted to the IDE Event Log (Notification group: “BubbleUnits”).</li>
+    <li>See the project README for detailed guidance.</li>
+  </ul>
+
+  <h2>Theme colors</h2>
+  <p class="note">These follow your IDE theme and are exposed to templates as CSS variables:</p>
+  <div class="legend mono">
+    <div><span class="chip" style="background: {{successColour}}"></span> success</div>
+    <div><span class="chip" style="background: {{warningColour}}"></span> warning</div>
+    <div><span class="chip" style="background: {{errorColour}}"></span> error</div>
+    <div><span class="chip" style="background: {{infoColour}}"></span> info</div>
+    <div><span class="chip" style="background: {{textColour}}"></span> text</div>
+  </div>
+</div>
+</body>
+</html>

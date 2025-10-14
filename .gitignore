@@ -4,4 +4,13 @@
 .intellijPlatform
 .kotlin
 .qodana
+.junie
+/docs
 build
+
+/src/web/PHPUnitBubbleReport.html
+web/dist
+web/node_modules
+
+# Aggregated test report for BubbleUnits
+junit-report.xml

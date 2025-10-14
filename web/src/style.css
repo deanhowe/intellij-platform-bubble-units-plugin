@@ -1,0 +1,70 @@
+/*@import "tailwindcss";*/
+@import "tailwindcss" source(none);
+
+/*@import "tailwindcss" source("../src");*/
+@source "../src";
+/*@source "../main.js";*/
+/*@source "../bubbles-json-first.js";*/
+/*@source "../bubbles.js";*/
+/*@source "../php-unit-bubbles.js";*/
+/*@source "../report-transformer.js";*/
+/*@source "../PHPUnitBubbleReport.html";*/
+
+@plugin "@tailwindcss/typography";
+
+@theme inline {
+    --color-bg: var(--color-stone-100);
+    --color-text: var(--color-stone-800);
+    --color-error: var(--color-red-800);
+    --color-failed: var(--color-amber-600);
+    --color-success: var(--color-lime-800);
+}
+
+.display {
+    @apply text-2xl
+}
+
+.btn {
+    @apply inline-flex items-center justify-center rounded-md px-3 py-2 font-semibold shadow-xs focus-visible:outline-2 focus-visible:outline-offset-2 no-underline
+}
+
+.tooltip {
+    @apply text-lg font-bold bg-stone-200/90
+    pt-1 p-2 pb-4 rounded-md break-words
+    border
+    ;
+    &.error {
+        @apply  text-error border-error;
+    }
+    &.failed {
+        @apply text-failed border-failed;
+    }
+    &.success {
+        @apply text-success border-success;
+    }
+    h3 {
+        @apply text-sm;
+    }
+    pre {
+        max-width: 100%;
+        overflow: scroll;
+    }
+    .time {
+        @apply text-xs bg-stone-200/70 text-black absolute right-1 bottom-1 px-1 rounded border ;
+    }
+}
+
+:root {
+    font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+    line-height: 1.5;
+    font-weight: 400;
+
+    color-scheme: light dark;
+    color: rgba(255, 255, 255, 0.87);
+    background-color: var(--color-bg);
+
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}

@@ -19,11 +19,13 @@ import javax.swing.Box
 import javax.swing.BoxLayout
 import java.awt.Dimension
 import com.intellij.ui.JBColor
+import com.intellij.ui.ScrollPaneFactory
 
 class BubbleSettingsConfigurable(private val project: Project) : Configurable {
     private var urlField: JBTextField? = null
     private var devPanelCheckbox: JBCheckBox? = null
     private var dirField: TextFieldWithBrowseButton? = null
+        private var snapshotDirField: TextFieldWithBrowseButton? = null
     private var fileCombo: ComboBox<String>? = null
     private val settings = BubbleSettingsService.getInstance(project)
 
@@ -32,14 +34,14 @@ class BubbleSettingsConfigurable(private val project: Project) : Configurable {
     override fun createComponent(): JComponent {
         // Initialize with the current URL (which might be from settings, .env, or default)
         val initialUrl = settings.url
-        urlField = JBTextField(if (initialUrl.startsWith("data:")) "<embedded data url>" else initialUrl)
+        urlField = JBTextField(if (initialUrl.startsWith("data:")) MyBundle.message("settings.placeholder.embeddedDataUrl") else initialUrl)
         // If it's a data URL, still allow editing by clearing; typing will overwrite the placeholder
         if (initialUrl.startsWith("data:")) {
-            urlField?.emptyText?.setText("<embedded data url hidden – clear and type to set a custom URL>")
+            urlField?.emptyText?.setText(MyBundle.message("settings.placeholder.embeddedDataUrlEmptyText"))
         }
 
         // Development/debug panel controls
-        devPanelCheckbox = JBCheckBox("Enable development panel (render bubble-test.html or selected)", settings.state.devPanelEnabled)
+        devPanelCheckbox = JBCheckBox(MyBundle.message("settings.devPanel.enable"), settings.state.devPanelEnabled)
 
         dirField = TextFieldWithBrowseButton()
         dirField?.text = settings.state.htmlDirectory ?: ""
@@ -55,7 +57,17 @@ class BubbleSettingsConfigurable(private val project: Project) : Configurable {
             }
         }
 
-        fileCombo = ComboBox()
+        // Snapshots directory chooser
+                snapshotDirField = TextFieldWithBrowseButton().apply { text = settings.state.snapshotDirectory ?: settings.getSnapshotDirectoryPath() }
+                val snapDesc = FileChooserDescriptorFactory.createSingleFolderDescriptor()
+                com.intellij.openapi.fileChooser.FileChooserFactory.getInstance()
+                    .installFileCompletion(snapshotDirField!!.textField, snapDesc, true, project)
+                snapshotDirField!!.addActionListener {
+                    val chosen = com.intellij.openapi.fileChooser.FileChooser.chooseFile(snapDesc, project, null)
+                    if (chosen != null) snapshotDirField!!.text = chosen.path
+                }
+
+                fileCombo = ComboBox()
         refreshFileCombo()
 
         // Update file list when directory changes
@@ -70,17 +82,17 @@ class BubbleSettingsConfigurable(private val project: Project) : Configurable {
         val urlRow = JPanel()
         urlRow.layout = BoxLayout(urlRow, BoxLayout.X_AXIS)
         urlField?.maximumSize = Dimension(Int.MAX_VALUE, urlField!!.preferredSize.height)
-        val testButton = javax.swing.JButton("Test URL")
-        val resetButton = javax.swing.JButton("Reset to default")
+        val testButton = javax.swing.JButton(MyBundle.message("settings.buttons.testUrl"))
+        val resetButton = javax.swing.JButton(MyBundle.message("settings.buttons.resetToDefault"))
         val errorLabel = JBLabel("")
         errorLabel.foreground = JBColor.RED
         errorLabel.isVisible = false
 
         fun validateUrlAndShow(): Boolean {
-            val text = urlField?.text?.trim().orEmpty().let { if (it == "<embedded data url>") "" else it }
+            val text = urlField?.text?.trim().orEmpty().let { if (it == MyBundle.message("settings.placeholder.embeddedDataUrl")) "" else it }
             val ok = UrlValidator.isValidCustomUrl(text)
             if (!ok && text.isNotEmpty()) {
-                errorLabel.text = "Invalid URL (allowed: http/https/file/data; javascript: is not allowed)"
+                errorLabel.text = MyBundle.message("settings.validation.invalidUrlDetailed")
                 errorLabel.isVisible = true
             } else {
                 errorLabel.text = ""
@@ -98,13 +110,13 @@ class BubbleSettingsConfigurable(private val project: Project) : Configurable {
 
         testButton.addActionListener {
             val text = urlField?.text?.trim().orEmpty()
-            if (text.isEmpty() || text == "<embedded data url>") {
-                errorLabel.text = "Enter a URL to test"
+            if (text.isEmpty() || text == MyBundle.message("settings.placeholder.embeddedDataUrl")) {
+                errorLabel.text = MyBundle.message("settings.validation.enterUrlToTest")
                 errorLabel.isVisible = true
             } else if (UrlValidator.isValidCustomUrl(text)) {
                 BrowserUtil.browse(text)
             } else {
-                errorLabel.text = "Invalid URL (allowed: http/https/file/data)"
+                errorLabel.text = MyBundle.message("settings.validation.invalidUrlSimple")
                 errorLabel.isVisible = true
             }
         }
@@ -120,17 +132,40 @@ class BubbleSettingsConfigurable(private val project: Project) : Configurable {
         urlRow.add(testButton)
         urlRow.add(Box.createRigidArea(Dimension(8, 0)))
         urlRow.add(resetButton)
-
-        val panel = FormBuilder.createFormBuilder()
+        
+        // Help section: wrap text and provide link
+        val helpTextArea = JBTextArea(MyBundle.message("bubbleSettingsUrlHelp")).apply {
+            isEditable = false
+            lineWrap = true
+            wrapStyleWord = true
+            background = null
+        }
+        val helpLink = com.intellij.ui.components.ActionLink(MyBundle.message("bubbleSettingsUrlHelpLink")) {
+            BrowserUtil.browse(MyBundle.message("bubbleSettingsUrlHelpUrl"))
+        }
+        val helpPanel = JPanel().apply {
+            layout = BoxLayout(this, BoxLayout.Y_AXIS)
+            alignmentX = 0f
+        }
+        helpPanel.add(helpTextArea)
+        helpPanel.add(Box.createRigidArea(Dimension(0, 4)))
+        helpPanel.add(helpLink)
+        
+        val innerPanel = FormBuilder.createFormBuilder()
             .addLabeledComponent(JBLabel(MyBundle.message("bubbleSettingsUrlLabel")), urlRow, 1, false)
             .addComponent(errorLabel)
+            .addComponent(helpPanel)
             .addComponent(devPanelCheckbox!!)
-            .addLabeledComponent(JBLabel("HTML directory"), dirField!!)
-            .addLabeledComponent(JBLabel("HTML file"), fileCombo!!)
+            .addLabeledComponent(JBLabel(MyBundle.message("settings.labels.htmlDirectory")), dirField!!)
+            .addLabeledComponent(JBLabel(MyBundle.message("settings.labels.htmlFile")), fileCombo!!)
+            .addLabeledComponent(JBLabel(MyBundle.message("settings.labels.snapshotsDirectory")), snapshotDirField!!)
             .addComponentFillVertically(JPanel(), 0)
             .panel
 
-        return panel
+        val scroll = ScrollPaneFactory.createScrollPane(innerPanel, true)
+        scroll.horizontalScrollBarPolicy = javax.swing.ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED
+        scroll.verticalScrollBarPolicy = javax.swing.ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED
+        return scroll
     }
 
     private fun refreshFileCombo() {
@@ -152,7 +187,7 @@ class BubbleSettingsConfigurable(private val project: Project) : Configurable {
         items.addAll(bundled)
         val discoveredUnique = discovered.filter { it !in bundled }
         if (discoveredUnique.isNotEmpty()) {
-            items.add("— from directory —")
+            items.add(MyBundle.message("settings.labels.fromDirectoryDividerText"))
             items.addAll(discoveredUnique)
         }
 
@@ -166,7 +201,7 @@ class BubbleSettingsConfigurable(private val project: Project) : Configurable {
             ): java.awt.Component {
                 val c = super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus) as javax.swing.JComponent
                 val text = value as? String ?: ""
-                if (text == "— from directory —") {
+                if (text == MyBundle.message("settings.labels.fromDirectoryDividerText")) {
                     this.isEnabled = false
                     this.foreground = java.awt.Color.GRAY
                 } else {
@@ -176,13 +211,13 @@ class BubbleSettingsConfigurable(private val project: Project) : Configurable {
             }
         }
         // Prevent selecting the divider
-        if ((fileCombo?.selectedItem as? String) == "— from directory —") {
+        if ((fileCombo?.selectedItem as? String) == MyBundle.message("settings.labels.fromDirectoryDividerText")) {
             fileCombo?.selectedIndex = 0
         }
 
         // Selection preferences: keep previous if still present, else prefer saved state, else default to bubble-test.html or first item
         val toSelect = when {
-            previousSelection != null && items.contains(previousSelection) && previousSelection != "— from directory —" -> previousSelection
+            previousSelection != null && items.contains(previousSelection) && previousSelection != MyBundle.message("settings.labels.fromDirectoryDividerText") -> previousSelection
             settings.state.selectedHtmlFile != null && items.contains(settings.state.selectedHtmlFile) -> settings.state.selectedHtmlFile
             items.contains("bubble-test.html") -> "bubble-test.html"
             else -> items.firstOrNull()
@@ -195,15 +230,16 @@ class BubbleSettingsConfigurable(private val project: Project) : Configurable {
         val devEnabledModified = devPanelCheckbox?.isSelected != settings.state.devPanelEnabled
         val dirModified = (dirField?.text ?: "") != (settings.state.htmlDirectory ?: "")
         val fileModified = (fileCombo?.selectedItem as? String ?: "") != (settings.state.selectedHtmlFile ?: "")
-        return customUrlModified || devEnabledModified || dirModified || fileModified
+        val snapModified = (snapshotDirField?.text ?: "") != (settings.state.snapshotDirectory ?: settings.getSnapshotDirectoryPath())
+        return customUrlModified || devEnabledModified || dirModified || fileModified || snapModified
     }
 
     override fun apply() {
         // Validate URL before applying
         val enteredRaw = urlField?.text ?: ""
-        val entered = if (enteredRaw == "<embedded data url>") "" else enteredRaw.trim()
+        val entered = if (enteredRaw == MyBundle.message("settings.placeholder.embeddedDataUrl")) "" else enteredRaw.trim()
         if (!UrlValidator.isValidCustomUrl(entered)) {
-            throw ConfigurationException("Invalid URL (allowed: http/https/file/data; javascript: is not allowed)")
+            throw ConfigurationException(MyBundle.message("settings.validation.invalidUrlDetailed"))
         }
         // Update the custom URL in settings (takes precedence over dev panel).
         settings.url = entered
@@ -213,6 +249,7 @@ class BubbleSettingsConfigurable(private val project: Project) : Configurable {
         st.devPanelEnabled = devPanelCheckbox?.isSelected == true
         st.htmlDirectory = dirField?.text?.trim().orEmpty().ifEmpty { null }
         st.selectedHtmlFile = (fileCombo?.selectedItem as? String)?.trim()
+        st.snapshotDirectory = snapshotDirField?.text?.trim().orEmpty().ifEmpty { null }
         val after = Triple(st.devPanelEnabled, st.htmlDirectory, st.selectedHtmlFile)
         if (before != after) {
             // Nudge URL recomputation and notify listeners to reload panel immediately
@@ -225,10 +262,11 @@ class BubbleSettingsConfigurable(private val project: Project) : Configurable {
         // Reset to the current URL (which might be from settings, .env, or default)
         run {
             val u = settings.url
-            urlField?.text = if (u.startsWith("data:")) "<embedded data url>" else u
+            urlField?.text = if (u.startsWith("data:")) MyBundle.message("settings.placeholder.embeddedDataUrl") else u
         }
         devPanelCheckbox?.isSelected = settings.state.devPanelEnabled
         dirField?.text = settings.state.htmlDirectory ?: ""
+        snapshotDirField?.text = settings.state.snapshotDirectory ?: settings.getSnapshotDirectoryPath()
         refreshFileCombo()
         val selected = settings.state.selectedHtmlFile
         if (selected != null) fileCombo?.selectedItem = selected
@@ -238,6 +276,7 @@ class BubbleSettingsConfigurable(private val project: Project) : Configurable {
         urlField = null
         devPanelCheckbox = null
         dirField = null
+        snapshotDirField = null
         fileCombo = null
     }
 }

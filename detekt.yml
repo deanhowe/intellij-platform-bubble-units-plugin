@@ -1,0 +1,37 @@
+build:
+  maxIssues: 0
+  excludeCorrectable: false
+
+config:
+  validation: true
+
+processors:
+  active: true
+
+console-reports:
+  active: true
+
+# Enable the formatting ruleset powered by ktlint
+formatting:
+  active: true
+  android: false
+  autoCorrect: false
+  Indentation:
+    active: false
+  MaximumLineLength:
+    active: true
+    maxLineLength: 140
+
+style:
+  MagicNumber:
+    active: false
+  WildcardImport:
+    active: true
+  UnusedImports:
+    active: true
+
+comments:
+  UndocumentedPublicClass:
+    active: false
+  UndocumentedPublicFunction:
+    active: false
