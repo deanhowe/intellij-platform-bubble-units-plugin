@@ -2,6 +2,22 @@
 
 # intellij-platform-bubble-units-plugin Changelog
 
+## [0.0.7]
+### Added
+- Privacy statement in README (no telemetry; reads .env and junit XML locally)
+- In-IDE Help page (resources/web/bubble-unit-help.html)
+- Expanded documentation with clear URL precedence explained
+- Screenshots
+
+### Changed
+- Improved README plugin description to be more concise and user-facing
+- Enhanced CI workflow with build, tests, and coverage reporting
+- Configured release workflow with secrets placeholders for deployment
+
+### Security
+- Navigation policy implemented to keep tool window on configured URLs
+- External links now open in system browser for better security
+
 ## [0.0.6]
 ### Added
 - CI workflow: build and tests on push/PR with Gradle cache (GitHub Actions)
