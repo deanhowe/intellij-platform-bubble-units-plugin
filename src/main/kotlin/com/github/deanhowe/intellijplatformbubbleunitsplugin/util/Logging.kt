@@ -8,12 +8,13 @@ import com.intellij.openapi.project.Project
  * Avoid building heavy strings in hot paths; prefer passing plain messages.
  */
 object Logging {
-    private fun prefix(project: Project?): String {
-        if (project == null) return "[BubbleUnits]"
-        val name = project.name
-        val base = project.basePath ?: ""
-        return "[BubbleUnits][project='$name'][basePath='$base']"
-    }
+    // Unused function
+    // private fun prefix(project: Project?): String {
+    //     if (project == null) return "[BubbleUnits]"
+    //     val name = project.name
+    //     val base = project.basePath ?: ""
+    //     return "[BubbleUnits][project='$name'][basePath='$base']"
+    // }
 
     fun info(project: Project?, category: Class<*>, message: String) {
         Logger.getInstance(category).info("${'$'}{prefix(project)} ${'$'}message")

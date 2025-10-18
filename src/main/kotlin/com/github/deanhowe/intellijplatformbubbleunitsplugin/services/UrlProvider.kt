@@ -14,7 +14,7 @@ package com.github.deanhowe.intellijplatformbubbleunitsplugin.services
  * BubbleSettingsService focused on persistence while keeping URL resolution
  * easy to test in isolation.
  */
-public class UrlProvider {
+class UrlProvider {
     /**
      * Resolve the effective URL to use.
      *
@@ -23,7 +23,7 @@ public class UrlProvider {
      * @param envUrlProvider supplier for URL resolved from project .env files; may return null.
      * @param defaultUrlProvider supplier for the tool's default content (typically a data URL).
      */
-    public fun resolve(
+    fun resolve(
         customUrl: String?,
         devPanelEnabled: Boolean,
         envUrlProvider: () -> String?,

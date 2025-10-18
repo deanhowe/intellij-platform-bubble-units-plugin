@@ -144,9 +144,9 @@ class BubbleSettingsService(private val project: Project) : PersistentStateCompo
             )
         }
         set(value) {
-            val normalized = value?.trim().orEmpty()
+            val normalized = value.trim()
             // Treat blank as null to allow dev panel/.env to take effect
-            customUrl = if (normalized.isEmpty()) null else normalized
+            customUrl = normalized.ifEmpty { null }
             state.customUrl = customUrl
             invalidateCache()
             scheduleRefresh()
@@ -291,8 +291,9 @@ class BubbleSettingsService(private val project: Project) : PersistentStateCompo
         return Computed(signature, url)
     }
 
-    @TestOnly
-    fun getCachedDefaultUrlForTest(): String? = computedRef.get()?.url
+    // Unused function
+    // @TestOnly
+    // fun getCachedDefaultUrlForTest(): String? = computedRef.get()?.url
 
     @TestOnly
     fun wasComputedOnEdtForTest(): Boolean = lastComputationOnEdt
@@ -426,7 +427,7 @@ class BubbleSettingsService(private val project: Project) : PersistentStateCompo
         // Apply safe placeholder replacements with an explicit matcher.
         // Matches tokens like {{KEY}} or {{ KEY }} composed of [A-Za-z0-9_].
         // Unknown tokens (including Blade-like {{ $name }}) are preserved as-is.
-        val tokenPattern = Regex("""\{\{\s*([A-Za-z0-9_]+)\s*\}\}""")
+        val tokenPattern = Regex("""[{][{]\s*([A-Za-z0-9_]+)\s*[}][}]""")
 
         // Log missing keys present in the template but absent in provided replacements
         val tokensInTemplate = tokenPattern.findAll(html).map { it.groupValues[1] }.toSet()
@@ -506,7 +507,7 @@ class BubbleSettingsService(private val project: Project) : PersistentStateCompo
             val defaultBase = project.basePath ?: System.getProperty("user.home", ".")
             val defaultPath = Paths.get(defaultBase, ".bubble-unit-snapshots").toString()
             val configured = state.snapshotDirectory?.trim().orEmpty()
-            val path = if (configured.isNotEmpty()) configured else defaultPath
+            val path = configured.ifEmpty { defaultPath }
             val dir = File(path)
             if (!dir.exists()) {
                 try { dir.mkdirs() } catch (_: Exception) {}
@@ -514,9 +515,10 @@ class BubbleSettingsService(private val project: Project) : PersistentStateCompo
             return dir
         }
 
-        fun setSnapshotDirectory(path: String?) {
-            state.snapshotDirectory = path?.trim()?.ifEmpty { null }
-        }
+        // Unused function
+    // fun setSnapshotDirectory(path: String?) {
+    //     state.snapshotDirectory = path?.trim()?.ifEmpty { null }
+    // }
 
         fun getSnapshotDirectoryPath(): String {
             return getOrCreateSnapshotDir().absolutePath

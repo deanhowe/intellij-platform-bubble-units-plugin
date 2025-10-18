@@ -1,20 +1,25 @@
-# BubbleUnits Plugin for IntelliJ Platform
+# BubbleUnits Browser Plugin for Jetbrains IDE/Platform/s
 
-
-![Build](https://github.com/deanhowe/intellij-platform-bubble-units-plugin/workflows/Build/badge.svg)
-[![Version](https://img.shields.io/jetbrains/plugin/v/28293-bubble-units.svg)](https://plugins.jetbrains.com/plugin/28293-bubble-units)
-[![Downloads](https://img.shields.io/jetbrains/plugin/d/28293-bubble-units.svg)](https://plugins.jetbrains.com/plugin/28293-bubble-units)
+![Build](https://github.com/deanhowe/intellij-platform-bubble-units-plugin/workflows/Build/badge.svg) [![Version](https://img.shields.io/jetbrains/plugin/v/28293-bubble-units.svg)](https://plugins.jetbrains.com/plugin/28293-bubble-units) [![Downloads](https://img.shields.io/jetbrains/plugin/d/28293-bubble-units.svg)](https://plugins.jetbrains.com/plugin/28293-bubble-units)
 
 ## Overview
 
-The BubbleUnits plugin is a simple tool that renders a webview from a URL in a dedicated tool window/panel within your IDE.
+The BubbleUnits Browser plugin is a simple tool that renders a single webview within a dedicated tab inside your JetBrains IDE of choice.
 
-The URL can be specified in the plugin's preferences, from the `BUBBLE_UNITS_URL=` variable in a `.env` file in your projects root directory, defaults to your `APP_URL=` or loads a BubbleUnits graph when a `junit-reports.xml` file is detected in your projects root directory.
+The rendered URL can be specified in the plugin's preferences, or via either a `BUBBLE_UNITS_URL` or `APP_URL` variable in your projects root `.env` file, if neither of these options is specified and a `junit-reports.xml` file is detected in your projects root directory a [BubbleUnits](https://deanhowe.github.io/php-bubbleunit-reports/) graph is shown.
+
+---
 
 <!-- Plugin description -->
 BubbleUnits embeds a dedicated web panel in your IDE to visualize test results as interactive bubble charts or display any web content you choose.
 
-Designed for PHP developers using PHPUnit (or any testing framework that produces JUnit XML), it gives you immediate visual feedback on test results without leaving your IDE.
+No navigation controls, no browser tabs - just your test results or chosen web content, beautifully displayed in your IDE.
+
+Designed for with PHP developers using TDD in mind (or any testing framework that produces JUnit XML), it gives you immediate visual feedback on test results without leaving your IDE.
+
+---
+
+<table border="0"><tr><td width="66%">
 
 **Key Features:**
 * Interactive bubble chart visualization of test results from junit-report.xml
@@ -23,20 +28,31 @@ Designed for PHP developers using PHPUnit (or any testing framework that produce
 * Toolbar with refresh and browser launch actions
 * Lightweight with minimal UI footprint
 
+</td><td valign="top">
+
+![Screenshot](https://github.com/deanhowe/intellij-platform-bubble-units-plugin/raw/main/art/bubble-units.gif)
+
+</td></tr></table>
+
+---
+
 **URL Configuration (in order of precedence):**
-1. Custom URL in Settings/Preferences | Tools | BubbleUnits
+1. Custom __URL__ in `Settings/Preferences | Tools | BubbleUnits`
 2. Development panel (if enabled): render selected/bundled HTML (data URL)
-3. BUBBLE_UNITS_URL in your project's .env file
-4. APP_URL in your project's .env file
-5. Default bundled bubble.html (data URL) as fallback
+3. `BUBBLE_UNITS_URL` or `APP_URL` in your project's .env file
+4. Default bundled bubble.html (data URL) as fallback
 
-To enable test visualization, add this to your test command:
+---
+
+To enable the BubbleUnit visualization, add this to your test command:
+
 ```
---log-junit junit-report.xml
+--log-junit junit-report.xml 
 ```
 
-No navigation controls, no browser tabs - just your test results or chosen web content, beautifully displayed in your IDE.
 <!-- Plugin description end -->
+
+---
 
 ## Features
 
@@ -47,6 +63,8 @@ No navigation controls, no browser tabs - just your test results or chosen web c
 - No navigation controls – just displays the specified URL
 
 Enable JUnit logging in your app i.e for Laravel PHP in your composer scripts like `@php artisan test --log-junit junit-report.xml`
+
+---
 
 ## Installation
 
@@ -65,6 +83,8 @@ https://github.com/deanhowe/intellij-platform-bubble-units-plugin
 
   Download the [latest release](https://github.com/deanhowe/intellij-platform-bubble-units-plugin/releases/latest) and install it manually using
   <kbd>Settings/Preferences</kbd> > <kbd>Plugins</kbd> > <kbd>⚙️</kbd> > <kbd>Install plugin from disk...</kbd>
+
+---
 
 ## Usage
 
@@ -90,6 +110,8 @@ https://github.com/deanhowe/intellij-platform-bubble-units-plugin
    - The specified file is monitored for changes even if it’s outside the project content roots/excluded folders
 - Open the Bubble Units tool window to view the web content or BubbleUnits graph
 
+---
+
 ## Development
 
 For developers who want to modify or extend this plugin:
@@ -114,12 +136,6 @@ For developers who want to modify or extend this plugin:
 
 The `./src/main/resources/web/bubble.html` file is sourced/derived from my repo [PHPUnitBubble Report](https://github.com/deanhowe/phpunit-d3-report) and if you want to edit the BubbleUnit graph, you should probably check that out.
 
-## Contributing
-
-Contributions are welcome! This plugin is intentionally kept simple and minimal, so please keep that in mind when submitting changes.
-
----
-Plugin based on the [IntelliJ Platform Plugin Template](https://github.com/JetBrains/intellij-platform-plugin-template).
 
 ---
 
@@ -138,6 +154,8 @@ Notes:
 - The first run will download the selected IDE into Gradle caches; subsequent runs are faster.
 - Ensure your plugin dependencies are compatible with the chosen IDE and version. If you need IDE-specific bundled plugins, set `platformBundledPlugins` in `gradle.properties` accordingly.
 - Supported `platformType` codes are documented in `gradle.properties`.
+
+---
 
 ## Development panel
 
@@ -168,6 +186,7 @@ Tips
 - Use bubble-test.html to verify JetBrains theme variables (text, background, error, warning, success, info) are applied.
 - bubble-unit-help.html contains a similar style-guide style page for quick visual checks.
 
+---
 
 ## Test logging (for running tests)
 
@@ -182,6 +201,8 @@ You don’t need to copy any files; just run:
 
 See .junie/guidelines.md for details.
 
+---
+
 ## JUnit XML test reports
 
 Gradle is configured to export test results in JUnit XML format.
@@ -192,11 +213,34 @@ Gradle is configured to export test results in JUnit XML format.
 
 These reports are useful for CI systems that consume JUnit XML artifacts.
 
+---
+
+### Snapshot exports (SVG/PNG/JSON)
+
+- Where files are saved: By default, exports are written into a hidden folder in your project root: `./.bubble-unit-snapshots/`.
+- After you click one of the export buttons, the IDE shows a notification with the absolute path to the saved file.
+- If the embedded page can’t export (e.g., the bridge isn’t ready or there’s no SVG yet), BubbleUnits now shows a balloon with guidance instead of failing silently.
+- You can change the snapshot directory in Settings/Preferences | Tools | BubbleUnits.
+---
+
 ## Troubleshooting
 
 - JCEF not available: If you’re running in a headless environment or JCEF is disabled, the tool window will display a message and won’t render the embedded page. Use the toolbar action “Open in Browser” to open the resolved URL in your default browser.
 - URL resolution order: Custom URL (Settings) > Development panel (data URL) > .env (BUBBLE_UNITS_URL, then APP_URL) > default bundled bubble.html. Use the “Reset to default” and “Test URL” buttons in Settings to verify inputs.
 - Errors in Event Log: When content cannot be resolved, an error notification is posted to the IDE Event Log (Notification group: “BubbleUnits”). Also check IDEA logs for messages containing “BubbleUnits”.
+
+---
+
+## Links
+
+- JetBrains Marketplace: https://plugins.jetbrains.com/plugin/28293-bubble-units
+- Issue tracker: https://github.com/deanhowe/intellij-platform-bubble-units-plugin/issues
+- Documentation:
+  - Release checklist: docs/release-checklist.md
+  - Marketplace tasks: docs/market-place-tasks.md
+  - Troubleshooting: docs/troubleshooting.md
+
+---
 
 ### Known benign IDE warnings during runIde
 
@@ -209,6 +253,7 @@ These messages can appear in the IDE log when launching the development IDE via 
 - `preload=NOT_HEADLESS`/`preload=TRUE` must be used only for core services (Code With Me related)
   - Explanation: Logged by bundled JetBrains plugins in development IDE builds; unrelated to BubbleUnits functionality.
 
+---
 
 ## Privacy
 
@@ -218,19 +263,12 @@ These messages can appear in the IDE log when launching the development IDE via 
   - `junit-report.xml` (or another configured JUnit XML path) for visualization
 - Network requests are only made to the configured URL when the tool window is active; the plugin does not fetch remote content at IDE startup.
 
-## Links
+---
 
-- JetBrains Marketplace: https://plugins.jetbrains.com/plugin/28293-bubble-units
-- Issue tracker: https://github.com/deanhowe/intellij-platform-bubble-units-plugin/issues
-- Documentation:
-  - Release checklist: docs/release-checklist.md
-  - Marketplace tasks: docs/market-place-tasks.md
-  - Troubleshooting: docs/troubleshooting.md
+## Contributing
 
+Contributions are welcome! This plugin is intentionally kept simple and minimal, so please keep that in mind when submitting changes.
 
-### Snapshot exports (SVG/PNG/JSON)
+---
 
-- Where files are saved: By default, exports are written into a hidden folder in your project root: `./.bubble-unit-snapshots/`.
-- After you click one of the export buttons, the IDE shows a notification with the absolute path to the saved file.
-- If the embedded page can’t export (e.g., the bridge isn’t ready or there’s no SVG yet), BubbleUnits now shows a balloon with guidance instead of failing silently.
-- You can change the snapshot directory in Settings/Preferences | Tools | BubbleUnits.
+Plugin based on the [IntelliJ Platform Plugin Template](https://github.com/JetBrains/intellij-platform-plugin-template).

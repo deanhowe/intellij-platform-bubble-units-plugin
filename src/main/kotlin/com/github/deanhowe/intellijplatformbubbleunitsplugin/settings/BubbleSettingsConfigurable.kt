@@ -140,7 +140,7 @@ class BubbleSettingsConfigurable(private val project: Project) : Configurable {
             wrapStyleWord = true
             background = null
         }
-        val helpLink = com.intellij.ui.components.ActionLink(MyBundle.message("bubbleSettingsUrlHelpLink")) {
+        val helpLink = ActionLink(MyBundle.message("bubbleSettingsUrlHelpLink")) {
             BrowserUtil.browse(MyBundle.message("bubbleSettingsUrlHelpUrl"))
         }
         val helpPanel = JPanel().apply {
@@ -199,7 +199,7 @@ class BubbleSettingsConfigurable(private val project: Project) : Configurable {
             override fun getListCellRendererComponent(
                 list: javax.swing.JList<*>, value: Any?, index: Int, isSelected: Boolean, cellHasFocus: Boolean
             ): java.awt.Component {
-                val c = super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus) as javax.swing.JComponent
+                val c = super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus) as JComponent
                 val text = value as? String ?: ""
                 if (text == MyBundle.message("settings.labels.fromDirectoryDividerText")) {
                     this.isEnabled = false

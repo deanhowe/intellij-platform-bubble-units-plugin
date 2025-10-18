@@ -4,8 +4,6 @@ import com.github.deanhowe.intellijplatformbubbleunitsplugin.services.BubbleSett
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.startup.ProjectActivity
-import com.intellij.openapi.wm.ToolWindowManager
-import com.intellij.util.messages.MessageBusConnection
 
 class MyProjectActivity : ProjectActivity {
 

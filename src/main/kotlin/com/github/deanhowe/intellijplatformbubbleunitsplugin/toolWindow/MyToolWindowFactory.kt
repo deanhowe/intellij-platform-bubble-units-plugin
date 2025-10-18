@@ -20,7 +20,6 @@ import org.cef.handler.CefLoadHandlerAdapter
 import org.cef.handler.CefDisplayHandlerAdapter
 import org.cef.browser.CefFrame
 import com.github.deanhowe.intellijplatformbubbleunitsplugin.MyBundle
-import com.github.deanhowe.intellijplatformbubbleunitsplugin.toolWindow.attachConsoleLogger
 import java.awt.BorderLayout
 import javax.swing.JComponent
 import javax.swing.JPanel
@@ -33,6 +32,10 @@ class MyToolWindowFactory : ToolWindowFactory {
         val content = contentManager.factory.createContent(myToolWindow.getContent(), null, false)
         content.setDisposer(myToolWindow)
         contentManager.addContent(content)
+        
+        // Set the icon and anchor using the public API
+        toolWindow.setIcon(com.intellij.openapi.util.IconLoader.getIcon("/icons/general/web.svg", this.javaClass))
+        toolWindow.setAnchor(com.intellij.openapi.wm.ToolWindowAnchor.RIGHT, null)
     }
 
     override fun shouldBeAvailable(project: Project) = true
@@ -200,7 +203,7 @@ class MyToolWindowFactory : ToolWindowFactory {
                 val clazz = JBCefJSQuery::class.java
                 val jbClass = Class.forName("com.intellij.ui.jcef.JBCefBrowser")
                 val method = clazz.getMethod("create", jbClass)
-                @Suppress("DEPRECATION", "DEPRECATION_ERROR")
+                @Suppress("DEPRECATION")
                 val created = method.invoke(null, br)
                 if (created is JBCefJSQuery) return created
             } catch (e: Throwable) {
@@ -1235,14 +1238,13 @@ class MyToolWindowFactory : ToolWindowFactory {
                     // ignore persistence errors
                 }
                 app.invokeLater({
-                    val br = browser
-                    if (br == null) return@invokeLater
+                    val br = browser ?: return@invokeLater
                     val isDataHtml = targetUrl.startsWith("data:text/html")
                     val resolveMs = (System.nanoTime() - loadStartNs) / 1_000_000
                     Logging.debug(
                         project,
                         MyToolWindowFactory::class.java,
-                        "loadUrl: resolved in ${resolveMs} ms (isDataHtml=${isDataHtml})"
+                        "loadUrl: resolved in $resolveMs ms (isDataHtml=$isDataHtml)"
                     )
                     if (isDataHtml) {
                         // Robust path: decode data URL and load as a real HTML document with a stable base URL.

@@ -2,7 +2,6 @@ package com.github.deanhowe.intellijplatformbubbleunitsplugin.services
 
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
-import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.vfs.VirtualFileManager
@@ -42,7 +41,7 @@ class BubbleReportWatcher(private val project: Project) : DisposableEx {
                     if (vf != null) {
                         matchesJunit(vf, envPathAbs)
                     } else {
-                        val p = e.path ?: return@any false
+                        val p = e.path
                         if (envPathAbs != null && p.equals(envPathAbs, ignoreCase = false)) return@any true
                         val name = p.substringAfterLast('/')
                         isJunitName(name)

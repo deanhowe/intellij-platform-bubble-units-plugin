@@ -11,9 +11,7 @@
 
     <extensions defaultExtensionNs="com.intellij">
         <toolWindow factoryClass="com.github.deanhowe.intellijplatformbubbleunitsplugin.toolWindow.MyToolWindowFactory" 
-                   id="BubbleUnits" 
-                   anchor="right"
-                   icon="AllIcons.General.Web"/>
+                   id="BubbleUnits"/>
         <postStartupActivity implementation="com.github.deanhowe.intellijplatformbubbleunitsplugin.startup.MyProjectActivity" />
         <projectConfigurable 
             parentId="tools" 
