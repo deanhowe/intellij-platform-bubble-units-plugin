@@ -4,7 +4,7 @@
 
 ## Overview
 
-The BubbleUnits Browser plugin is a simple tool that renders a single webview within a dedicated tab inside your JetBrains IDE of choice.
+The BubbleUnits[^1] Browser plugin is a simple tool that renders a single webview within a dedicated tab inside your JetBrains IDE of choice.
 
 The rendered URL can be specified in the plugin's preferences, or via either a `BUBBLE_UNITS_URL` or `APP_URL` variable in your projects root `.env` file, if neither of these options is specified and a `junit-reports.xml` file is detected in your projects root directory a [BubbleUnits](https://deanhowe.github.io/php-bubbleunit-reports/) graph is shown.
 
@@ -19,7 +19,7 @@ Designed for with PHP developers using TDD in mind (or any testing framework tha
 
 ---
 
-<table border="0"><tr><td width="66%">
+<table border="0"><tr cellborder="2"><td width="66%" border="2">
 
 **Key Features:**
 * Interactive bubble chart visualization of test results from junit-report.xml
@@ -150,10 +150,12 @@ You can switch the IDE (and version) at runtime via Gradle properties without ch
 - PhpStorm:
   ./gradlew runIde -PplatformType=PS -PplatformVersion=2024.3.4
 
-Notes:
-- The first run will download the selected IDE into Gradle caches; subsequent runs are faster.
-- Ensure your plugin dependencies are compatible with the chosen IDE and version. If you need IDE-specific bundled plugins, set `platformBundledPlugins` in `gradle.properties` accordingly.
-- Supported `platformType` codes are documented in `gradle.properties`.
+---
+
+> [!NOTE]
+> - The first run will download the selected IDE into Gradle caches; subsequent runs are faster.
+> - Ensure your plugin dependencies are compatible with the chosen IDE and version. If you need IDE-specific bundled plugins, set `platformBundledPlugins` in `gradle.properties` accordingly.
+> - Supported `platformType` codes are documented in `gradle.properties`.
 
 ---
 
@@ -272,3 +274,11 @@ Contributions are welcome! This plugin is intentionally kept simple and minimal,
 ---
 
 Plugin based on the [IntelliJ Platform Plugin Template](https://github.com/JetBrains/intellij-platform-plugin-template).
+
+<script src="https://plugins.jetbrains.com/assets/scripts/mp-widget.js"></script>
+<script>
+  // Please, replace #yourelement with a real element id on your webpage
+  MarketplaceWidget.setupMarketplaceWidget('install', 28293, "#yourelement");
+</script>
+
+[^1]: BubbleUnits - a diagram showing the run time of tests in a test suite
