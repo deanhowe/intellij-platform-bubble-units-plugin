@@ -1,6 +1,6 @@
 # BubbleUnits Browser Plugin for Jetbrains IDE/Platform/s
 
-![Build](https://github.com/deanhowe/intellij-platform-bubble-units-plugin/workflows/Build/badge.svg) [![Version](https://img.shields.io/jetbrains/plugin/v/28293-bubble-units.svg)](https://plugins.jetbrains.com/plugin/28293-bubble-units) [![Downloads](https://img.shields.io/jetbrains/plugin/d/28293-bubble-units.svg)](https://plugins.jetbrains.com/plugin/28293-bubble-units)
+![Build](https://github.com/deanhowe/intellij-platform-bubble-units-plugin/workflows/Build/badge.svg) [![Version](https://img.shields.io/jetbrains/plugin/v/28293-bubble-units.svg)](https://plugins.jetbrains.com/plugin/28293-bubble-units) [![Downloads](https://img.shields.io/jetbrains/plugin/d/28293-bubble-units.svg)](https://plugins.jetbrains.com/plugin/28293-bubble-units) <div id="jetbrainsMarketplacePanel"></div>
 
 ## Overview
 
@@ -55,6 +55,8 @@ To enable the BubbleUnit visualization, add this to your test command:
 ---
 
 ## Features
+
+<img src="https://github.com/deanhowe/intellij-platform-bubble-units-plugin/raw/main/art/bubble-units-screenshot-dark.png" width="400" align="right" alt="Screenshot of BubbleUnits Plugin"/>
 
 - Embeds a web page directly in your IDE
 - Simple configuration through the settings panel
@@ -275,10 +277,15 @@ Contributions are welcome! This plugin is intentionally kept simple and minimal,
 
 Plugin based on the [IntelliJ Platform Plugin Template](https://github.com/JetBrains/intellij-platform-plugin-template).
 
+<div id="jetbrainsMarketplacePanel"></div>
+<img src="https://resources.jetbrains.com/storage/products/company/brand/logos/jb_beam.svg" width="200" align="left" alt="JetBrainsIcon"/>
+<div id="jetbrainsMarketplaceButton"></div>
 <script src="https://plugins.jetbrains.com/assets/scripts/mp-widget.js"></script>
 <script>
-  // Please, replace #yourelement with a real element id on your webpage
-  MarketplaceWidget.setupMarketplaceWidget('install', 28293, "#yourelement");
+  MarketplaceWidget.setupMarketplaceWidget('install', 28293, "#jetbrainsMarketplaceButton");
+  MarketplaceWidget.setupMarketplaceWidget('card', 28293, "#jetbrainsMarketplacePanel");
 </script>
+
+---
 
 [^1]: BubbleUnits - a diagram showing the run time of tests in a test suite
