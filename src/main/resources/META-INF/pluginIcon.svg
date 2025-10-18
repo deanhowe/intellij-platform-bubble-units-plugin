@@ -1,0 +1,62 @@
+<svg id="Layer_1" xmlns="http://www.w3.org/2000/svg" width="40" height="40" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" viewBox="0 0 40 40">
+  <defs>
+    <style>
+      .st0 {
+        fill: #ffc107;
+      }
+
+      .st0, .st1, .st2 {
+        stroke: #fff;
+        stroke-miterlimit: 10;
+        stroke-width: .13px;
+      }
+
+      .st3 {
+        fill: url(#linear-gradient);
+      }
+
+      .st1 {
+        fill: #2e7d32;
+      }
+
+      .st2 {
+        fill: #ff6464;
+      }
+    </style>
+    <linearGradient id="linear-gradient" x1="6.0000002" y1="38.0000002" x2="34.0000004" y2="5.9999992" gradientTransform="translate(0 42) scale(1 -1)" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#2f80ed"/>
+      <stop offset="1" stop-color="#8e54e9"/>
+    </linearGradient>
+  </defs>
+  <rect class="st3" x="2" y="2" width="36" height="36" rx="8" ry="8"/>
+  <g>
+    <circle class="st1" cx="10.8616277" cy="25.7988345" r="2.6252768"/>
+    <circle class="st1" cx="15.363534" cy="25.7988345" r="1.740923"/>
+    <circle class="st1" cx="14.0368399" cy="29.8500012" r="2.386243"/>
+    <circle class="st1" cx="13.6653816" cy="24.1428487" r=".4952914"/>
+    <circle class="st1" cx="12.9351917" cy="23.0861316" r=".65346"/>
+    <circle class="st1" cx="14.6694995" cy="23.4069463" r=".6139148"/>
+    <circle class="st1" cx="11.0277612" cy="29.1281711" r=".5724971"/>
+    <circle class="st1" cx="11.6141244" cy="22.4393766" r=".6817211"/>
+    <circle class="st1" cx="14.0537475" cy="22.0712113" r=".7212083"/>
+    <circle class="st1" cx="18.6549141" cy="28.3998867" r="2.3184482"/>
+    <circle class="st1" cx="16.0333959" cy="23.3996689" r=".6142957"/>
+    <circle class="st1" cx="8.7637585" cy="21.2059002" r="2.2883829"/>
+    <circle class="st1" cx="13.0036663" cy="19.0685314" r="2.324086"/>
+    <circle class="st1" cx="8.0357824" cy="30.2013551" r="2.4704231"/>
+    <circle class="st1" cx="15.6531515" cy="21.9518277" r=".7469401"/>
+    <circle class="st1" cx="11.2202413" cy="32.267746" r="1.1900208"/>
+    <circle class="st1" cx="17.004223" cy="24.1290732" r=".4643022"/>
+    <circle class="st1" cx="7.5148663" cy="24.2951533" r=".9080597"/>
+    <circle class="st1" cx="7.8812369" cy="27.1057292" r=".4933537"/>
+    <circle class="st2" cx="21.9165199" cy="21.9491699" r="4.77425"/>
+    <circle class="st0" cx="17.6262642" cy="11.164459" r="6.6967787"/>
+    <circle class="st1" cx="6.3049012" cy="26.1822088" r="1.1978845"/>
+    <circle class="st1" cx="17.2021189" cy="31.6823533" r="1.1354413"/>
+    <circle class="st1" cx="5.0513683" cy="28.1611781" r="1.0089857"/>
+    <circle class="st1" cx="5.8054613" cy="23.0581813" r="1.0662499"/>
+    <circle class="st1" cx="13.3213971" cy="33.3259383" r="1.0268531"/>
+    <circle class="st1" cx="4.7528185" cy="24.7419585" r=".7837854"/>
+    <circle class="st1" cx="9.845949" cy="18.1333144" r=".8335059"/>
+  </g>
+</svg>
