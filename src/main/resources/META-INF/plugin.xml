@@ -2,7 +2,7 @@
 <idea-plugin>
     <id>com.github.deanhowe.intellijplatformbubbleunitsplugin</id>
     <name>BubbleUnits Browser</name>
-    <vendor>deanhowe</vendor>
+    <vendor email="deanhowe@gmail.com" url="https://github.com/deanhowe/intellij-platform-bubble-units-plugin">Dean Howe</vendor>
 
     <depends>com.intellij.modules.platform</depends>
 <!--    <depends>org.intellij.plugins.markdown</depends>-->

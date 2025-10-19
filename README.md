@@ -240,9 +240,8 @@ These reports are useful for CI systems that consume JUnit XML artifacts.
 - JetBrains Marketplace: https://plugins.jetbrains.com/plugin/28293-bubble-units
 - Issue tracker: https://github.com/deanhowe/intellij-platform-bubble-units-plugin/issues
 - Documentation:
-  - Release checklist: docs/release-checklist.md
-  - Marketplace tasks: docs/market-place-tasks.md
   - Troubleshooting: docs/troubleshooting.md
+  - Using as a template: docs/template-usage.md
 
 ---
 

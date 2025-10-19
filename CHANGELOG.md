@@ -2,6 +2,39 @@
 
 # intellij-platform-bubble-units-plugin Changelog
 
+## [0.0.8] - 2025-10-19
+### Added
+- In-IDE Help page and bundled web assets pipeline (Vite) wired into Gradle; HTML exported to resources at build/run time.
+- Export buttons become disabled after successful export, with clear visual indication (dimmed, grayscale, added checkmark) across IDE and standalone web builds.
+- Consolidated export notifications with debounce and deduplication by file path.
+- Robust JCEF bridge with primary JSQuery channel and a reliable hash-based fallback; early no-op stubs to prevent ReferenceErrors.
+- Toolbar action to re-inject the bridge at runtime.
+- Monochrome toolbar icons (Refresh, Web, Bolt) consistent with IDE tinting.
+
+### Changed
+- Plugin display name updated to "BubbleUnits Browser" for IDE and Marketplace.
+- Tool window icon handling aligned with JetBrains best practices: icon declared in plugin.xml and stored under resources/icons; removed programmatic icon setting and icon mapper.
+- Avoided forcing tool window placement; layout is user-controlled.
+- Notification handler now appends snapshot directory only for export-related messages.
+- Delegated click listener is the single source of truth for export buttons to prevent multiple handlers and duplicate exports.
+- Extracted injected JS to a resource file (src/main/resources/js/bridge-inject.js) groundwork for readability; inline injection kept in sync.
+- Detekt configuration tuned: disabled ktlint MaximumLineLength to reduce noise from long JS literals.
+
+### Fixed
+- Eliminated duplicate "BubbleUnits bridge ready" messages and doubled notifications by making injection idempotent and gating one-time notifications.
+- Removed console errors about undefined bridge symbols by providing early, detectable stubs and dynamic bridge lookup per call.
+- Ensured exports save reliably when JSQuery is unavailable: URL-encode Base64 in hash, add timestamp to force onAddressChange, and robust Kotlin-side parsing/decoding.
+- Resolved cases of "no errors, but also no files" via stub-aware fallback installation and direct hash fallback inside sender.
+- Consolidated notification no longer lists the same file multiple times; unique paths only.
+- Gradle configuration cache error fixed by replacing ad-hoc doLast with a typed, cacheable MergeJUnitReportsTask using proper inputs/outputs.
+
+### Security
+- Navigation policy and external link handling to keep content on configured URLs and open external links in system browser.
+
+### Build/CI
+- Kover XML reports on check; Detekt integrated into check lifecycle with baseline; configuration cache enabled and working.
+- Frontend (Node/Vite) build integrated into processResources, assemble, and runIde.
+
 ## [0.0.7]
 ### Added
 - Privacy statement in README (no telemetry; reads .env and junit XML locally)
