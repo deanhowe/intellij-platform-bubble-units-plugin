@@ -4,7 +4,6 @@ import org.jetbrains.intellij.platform.gradle.TestFrameworkType
 import java.io.File
 import org.w3c.dom.Element
 
-val projectDirPath = project.projectDir.absolutePath
 
 plugins {
     id("java") // Java support
@@ -159,6 +158,91 @@ tasks.withType<io.gitlab.arturbosch.detekt.Detekt> {
 // Make detekt part of the standard check lifecycle
 tasks.named("check") { dependsOn("detekt") }
 
+// --- Typed, cacheable task for merging JUnit XML reports ---
+@org.gradle.api.tasks.CacheableTask
+abstract class MergeJUnitReportsTask : org.gradle.api.DefaultTask() {
+    @get:org.gradle.api.tasks.InputDirectory
+    @get:org.gradle.api.tasks.PathSensitive(org.gradle.api.tasks.PathSensitivity.RELATIVE)
+    abstract val inputDir: org.gradle.api.file.DirectoryProperty
+
+    @get:org.gradle.api.tasks.OutputFile
+    abstract val outputFile: org.gradle.api.file.RegularFileProperty
+
+    @org.gradle.api.tasks.TaskAction
+    fun merge() {
+        val resultsRoot = inputDir.get().asFile
+        val targetFile = outputFile.asFile.get()
+
+        val factory = javax.xml.parsers.DocumentBuilderFactory.newInstance()
+        factory.isNamespaceAware = false
+        val builder = factory.newDocumentBuilder()
+        val master = builder.newDocument()
+        val root = master.createElement("testsuites")
+        master.appendChild(root)
+
+        var totalTests = 0
+        var totalFailures = 0
+        var totalErrors = 0
+        var totalSkipped = 0
+        var totalTime = 0.0
+
+        val xmlFiles = if (resultsRoot.exists()) {
+            resultsRoot.walkTopDown().filter { it.isFile && it.name.endsWith(".xml") }.toList()
+        } else {
+            emptyList()
+        }
+
+        xmlFiles.forEach { f ->
+            try {
+                val doc = builder.parse(f)
+                val elem = doc.documentElement
+
+                fun importSuite(suiteElem: org.w3c.dom.Element) {
+                    fun getInt(name: String) = suiteElem.getAttribute(name).toIntOrNull() ?: 0
+                    fun getDouble(name: String) = suiteElem.getAttribute(name).toDoubleOrNull() ?: 0.0
+                    totalTests += getInt("tests")
+                    totalFailures += getInt("failures")
+                    totalErrors += getInt("errors")
+                    totalSkipped += (getInt("skipped") + getInt("ignored"))
+                    totalTime += getDouble("time")
+                    val imported = master.importNode(suiteElem, true)
+                    root.appendChild(imported)
+                }
+
+                when (elem.tagName) {
+                    "testsuite" -> importSuite(elem)
+                    "testsuites" -> {
+                        val children = elem.getElementsByTagName("testsuite")
+                        for (i in 0 until children.length) {
+                            importSuite(children.item(i) as org.w3c.dom.Element)
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                logger.warn("Failed to merge test report ${'$'}{f.name}: ${'$'}{e.message}")
+            }
+        }
+
+        root.setAttribute("tests", totalTests.toString())
+        root.setAttribute("failures", totalFailures.toString())
+        root.setAttribute("errors", totalErrors.toString())
+        root.setAttribute("skipped", totalSkipped.toString())
+        root.setAttribute("time", "%.3f".format(totalTime))
+
+        val tf = javax.xml.transform.TransformerFactory.newInstance().newTransformer()
+        tf.setOutputProperty(javax.xml.transform.OutputKeys.INDENT, "yes")
+        tf.transform(javax.xml.transform.dom.DOMSource(master), javax.xml.transform.stream.StreamResult(targetFile))
+
+        if (xmlFiles.isEmpty()) {
+            logger.lifecycle("No test result XMLs found under ${'$'}resultsRoot; wrote empty ${'$'}{targetFile.path}")
+        } else {
+            logger.lifecycle("Merged ${'$'}{xmlFiles.size} test result file(s) into ${'$'}{targetFile.path}")
+        }
+    }
+}
+
+// --------------------------------------------------------------
+
 tasks {
     wrapper {
         gradleVersion = providers.gradleProperty("gradleVersion").get()
@@ -169,86 +253,13 @@ tasks {
     }
 
     // Merge Gradle's per-class JUnit XML reports into a single junit-report.xml at project root
-    val mergeJUnitReports by registering {
+    // Converted to a typed, cacheable task to be compatible with Gradle's configuration cache.
+    // Task type is declared below outside the tasks block.
+    val mergeJUnitReports by registering(MergeJUnitReportsTask::class) {
         group = "verification"
         description = "Merge Gradle test XML reports into a single junit-report.xml at project root for BubbleUnits"
-        notCompatibleWithConfigurationCache("Simple XML merge script uses non-CC-safe references")
-        inputs.dir(layout.buildDirectory.dir("test-results"))
-        outputs.file(layout.projectDirectory.file("junit-report.xml"))
-
-        doLast {
-            val resultsRoot = File("$projectDirPath/build/test-results")
-            val targetFile = File("$projectDirPath/junit-report.xml")
-
-            val factory = javax.xml.parsers.DocumentBuilderFactory.newInstance()
-            factory.isNamespaceAware = false
-            val builder = factory.newDocumentBuilder()
-            val master = builder.newDocument()
-            val root = master.createElement("testsuites")
-            master.appendChild(root)
-
-            var totalTests = 0
-            var totalFailures = 0
-            var totalErrors = 0
-            var totalSkipped = 0
-            var totalTime = 0.0
-
-            val xmlFiles = if (resultsRoot.exists()) {
-                resultsRoot.walkTopDown().filter { it.isFile && it.name.endsWith(".xml") }.toList()
-            } else {
-                emptyList()
-            }
-
-            xmlFiles.forEach { f ->
-                try {
-                    val doc = builder.parse(f)
-                    val elem = doc.documentElement
-
-                    fun importSuite(suiteElem: Element) {
-                        fun getInt(name: String) = suiteElem.getAttribute(name).toIntOrNull() ?: 0
-                        fun getDouble(name: String) = suiteElem.getAttribute(name).toDoubleOrNull() ?: 0.0
-                        totalTests += getInt("tests")
-                        totalFailures += getInt("failures")
-                        totalErrors += getInt("errors")
-                        totalSkipped += (getInt("skipped") + getInt("ignored"))
-                        totalTime += getDouble("time")
-                        val imported = master.importNode(suiteElem, true)
-                        root.appendChild(imported)
-                    }
-
-                    when (elem.tagName) {
-                        "testsuite" -> importSuite(elem)
-                        "testsuites" -> {
-                            val children = elem.getElementsByTagName("testsuite")
-                            for (i in 0 until children.length) {
-                                importSuite(children.item(i) as Element)
-                            }
-                        }
-                        else -> {
-                            // ignore other roots
-                        }
-                    }
-                } catch (e: Exception) {
-                    logger.warn("Failed to merge test report ${f.name}: ${e.message}")
-                }
-            }
-
-            root.setAttribute("tests", totalTests.toString())
-            root.setAttribute("failures", totalFailures.toString())
-            root.setAttribute("errors", totalErrors.toString())
-            root.setAttribute("skipped", totalSkipped.toString())
-            root.setAttribute("time", "%.3f".format(totalTime))
-
-            val tf = javax.xml.transform.TransformerFactory.newInstance().newTransformer()
-            tf.setOutputProperty(javax.xml.transform.OutputKeys.INDENT, "yes")
-            tf.transform(javax.xml.transform.dom.DOMSource(master), javax.xml.transform.stream.StreamResult(targetFile))
-
-            if (xmlFiles.isEmpty()) {
-                logger.lifecycle("No test result XMLs found under $resultsRoot; wrote empty ${targetFile.path}")
-            } else {
-                logger.lifecycle("Merged ${xmlFiles.size} test result file(s) into ${targetFile.path}")
-            }
-        }
+        inputDir.set(layout.buildDirectory.dir("test-results"))
+        outputFile.set(layout.projectDirectory.file("junit-report.xml"))
     }
 
     test {

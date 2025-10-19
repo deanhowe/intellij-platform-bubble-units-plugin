@@ -1,0 +1,10 @@
+{
+  "icons": {
+    "expui": {
+      "": {
+        "bubbleUnitsTabIcon.svg": "META-INF/bubbleUnitsTabIcon.svg",
+        "bubbleUnitsTabIcon_dark.svg": "META-INF/bubbleUnitsTabIcon_dark.svg"
+      }
+    }
+  }
+}

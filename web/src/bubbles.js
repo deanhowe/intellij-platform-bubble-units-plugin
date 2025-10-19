@@ -232,6 +232,25 @@ function setupSnapshotExports(jsonReport) {
     try {
         const container = document.getElementById('ui-buttons') || document;
         if (!container || container.dataset.bubbleWired === '1') return;
+        // Ensure a visible disabled style for export buttons (standalone/web build)
+        try {
+            if (!document.getElementById('bu-disabled-style')) {
+                const st = document.createElement('style');
+                st.id = 'bu-disabled-style';
+                st.textContent = `
+.bu-disabled, #svg_download_link[disabled], #png_download_link[disabled], #json_report_download_link[disabled] {
+  opacity: 0.55 !important;
+  filter: grayscale(100%) !important;
+  cursor: default !important;
+  pointer-events: none !important;
+}
+#svg_download_link.bu-disabled::after, #png_download_link.bu-disabled::after, #json_report_download_link.bu-disabled::after {
+  content: ' \u2713';
+  font-weight: 600;
+}`;
+                (document.head || document.documentElement).appendChild(st);
+            }
+        } catch(_) {}
         const logPrefix = '[BubbleUnits] export:';
         const elSvg = document.getElementById('svg_download_link');
         const elPng = document.getElementById('png_download_link');
@@ -250,6 +269,7 @@ function setupSnapshotExports(jsonReport) {
                     }
                     const b64 = base64FromText(svgText);
                     saveViaBridge('svg', 'phpunit-bubble-report.svg', b64);
+                    try { elSvg.setAttribute('disabled','true'); elSvg.classList.add('bu-disabled'); elSvg.title = 'Exported'; if (elSvg && elSvg.style) elSvg.style.pointerEvents = 'none'; } catch(_) {}
                 } catch (err) { 
                     console.error(logPrefix, 'svg failed', err);
                     notifyViaBridge('SVG export failed: ' + (err.message || 'unknown error'));
@@ -269,7 +289,7 @@ function setupSnapshotExports(jsonReport) {
                     notifyViaBridge('Exporting PNG…');
                     const b64 = await toPngBase64('svg.bubbles');
                     saveViaBridge('png', 'phpunit-bubble-report.png', b64);
-                    elPng.remove();
+                    try { elPng.setAttribute('disabled','true'); elPng.classList.add('bu-disabled'); elPng.title = 'Exported'; if (elPng && elPng.style) elPng.style.pointerEvents = 'none'; } catch(_) {}
                 } catch (err) { 
                     console.error(logPrefix, 'png failed', err);
                     notifyViaBridge('PNG export failed: ' + (err.message || 'unknown error'));
@@ -284,6 +304,7 @@ function setupSnapshotExports(jsonReport) {
                     const text = JSON.stringify(jsonReport);
                     const b64 = base64FromText(text);
                     saveViaBridge('json', 'phpunit-bubble-report.json', b64);
+                    try { elJson.setAttribute('disabled','true'); elJson.classList.add('bu-disabled'); elJson.title = 'Exported'; if (elJson && elJson.style) elJson.style.pointerEvents = 'none'; } catch(_) {}
                 } catch (err) { 
                     console.error(logPrefix, 'json failed', err);
                     notifyViaBridge('JSON export failed: ' + (err.message || 'unknown error'));

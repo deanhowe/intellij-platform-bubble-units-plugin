@@ -2,11 +2,12 @@
   <defs>
     <style>
       .st0 {
-        fill: purple;
+        fill: orange;
+        opacity:0.5;
       }
 
       .st0, .st1, .st2 {
-        stroke: #000;
+        stroke: rgba(255,255,255,0.2);
         stroke-miterlimit: 10;
         stroke-width: .13px;
       }
@@ -17,15 +18,17 @@
 
       .st1 {
         fill: #2e7d32;
+        opacity:0.9;
       }
 
       .st2 {
-        fill: navy;
+        fill: crimson;
+        opacity:0.4;
       }
     </style>
     <linearGradient id="linear-gradient" x1="6.0000002" y1="38.0000002" x2="34.0000004" y2="5.9999992" gradientTransform="translate(0 42) scale(1 -1)" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#8e54e9"/>
-      <stop offset="1" stop-color="#2f80ed"/>
+      <stop offset="0" stop-color="#6F0067"/>
+      <stop offset="1" stop-color="blavk"/>
     </linearGradient>
   </defs>
   <rect class="st3" x="2" y="2" width="36" height="36" rx="8" ry="8"/>

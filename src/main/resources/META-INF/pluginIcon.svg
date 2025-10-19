@@ -3,10 +3,11 @@
     <style>
       .st0 {
         fill: #ffc107;
+        opacity: 0.8;
       }
 
       .st0, .st1, .st2 {
-        stroke: #fff;
+        stroke: rgba(233,233,233,0.4);
         stroke-miterlimit: 10;
         stroke-width: .13px;
       }
@@ -17,10 +18,12 @@
 
       .st1 {
         fill: #2e7d32;
+
       }
 
       .st2 {
         fill: #ff6464;
+        opacity: 0.8;
       }
     </style>
     <linearGradient id="linear-gradient" x1="6.0000002" y1="38.0000002" x2="34.0000004" y2="5.9999992" gradientTransform="translate(0 42) scale(1 -1)" gradientUnits="userSpaceOnUse">

@@ -11,7 +11,9 @@ import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.diagnostic.Logger
 import com.github.deanhowe.intellijplatformbubbleunitsplugin.util.Logging
 import com.intellij.openapi.project.Project
+import com.intellij.icons.AllIcons
 import com.intellij.openapi.ui.Messages
+import com.intellij.openapi.util.IconLoader
 import com.intellij.openapi.wm.ToolWindow
 import com.intellij.openapi.wm.ToolWindowFactory
 import com.intellij.ui.jcef.JBCefBrowser
@@ -33,9 +35,8 @@ class MyToolWindowFactory : ToolWindowFactory {
         content.setDisposer(myToolWindow)
         contentManager.addContent(content)
         
-        // Set the icon and anchor using the public API
-        toolWindow.setIcon(com.intellij.openapi.util.IconLoader.getIcon("/icons/general/web.svg", this.javaClass))
-        toolWindow.setAnchor(com.intellij.openapi.wm.ToolWindowAnchor.RIGHT, null)
+        // Icon is declared in plugin.xml toolWindow element; avoid setting it programmatically.
+        // Avoid forcing anchor; let users control tool window placement per platform guidelines.
     }
 
     override fun shouldBeAvailable(project: Project) = true
@@ -156,25 +157,33 @@ class MyToolWindowFactory : ToolWindowFactory {
                 exportNotificationTask = null
                 copy
             }
-            
             if (exports.isEmpty()) return
-            
+
+            // Deduplicate by file path (preserve first occurrence order)
+            val uniqueByPath = LinkedHashMap<String, ExportOperation>()
+            for (e in exports) {
+                if (!uniqueByPath.containsKey(e.path)) {
+                    uniqueByPath[e.path] = e
+                }
+            }
+            val unique = uniqueByPath.values.toList()
+
             // Build a consolidated message
             val message = buildString {
-                if (exports.size == 1) {
-                    val export = exports.first()
+                if (unique.size == 1) {
+                    val export = unique.first()
                     append("Saved ${export.type} → ${export.path}")
                 } else {
-                    append("Saved ${exports.size} files:")
-                    exports.take(3).forEach { export ->
+                    append("Saved ${unique.size} files:")
+                    unique.take(3).forEach { export ->
                         append("\n• ${export.type}: ${export.path}")
                     }
-                    if (exports.size > 3) {
-                        append("\n• ...and ${exports.size - 3} more")
+                    if (unique.size > 3) {
+                        append("\n• ...and ${unique.size - 3} more")
                     }
                 }
             }
-            
+
             try {
                 com.intellij.notification.NotificationGroupManager.getInstance()
                     .getNotificationGroup("BubbleUnits")
@@ -220,7 +229,7 @@ class MyToolWindowFactory : ToolWindowFactory {
             group.add(object : AnAction(
                 MyBundle.message("toolbar.reload"),
                 MyBundle.message("toolbar.reload.description"),
-                null
+                AllIcons.Actions.Refresh
             ) {
                 override fun actionPerformed(e: AnActionEvent) {
                     loadUrl()
@@ -231,7 +240,7 @@ class MyToolWindowFactory : ToolWindowFactory {
             group.add(object : AnAction(
                 MyBundle.message("toolbar.openInBrowser"),
                 MyBundle.message("toolbar.openInBrowser.description"),
-                null
+                AllIcons.General.Web
             ) {
                 override fun actionPerformed(e: AnActionEvent) {
                     val app = com.intellij.openapi.application.ApplicationManager.getApplication()
@@ -341,20 +350,32 @@ class MyToolWindowFactory : ToolWindowFactory {
             group.add(object : AnAction(
                 "Reinject Bridge",
                 "Re-inject the Bubble Units JS bridge and re-bind export buttons",
-                null
+                IconLoader.getIcon("/icons/boltIcon.svg", javaClass)
             ) {
                 override fun actionPerformed(e: AnActionEvent) {
                     val br = browser ?: return
                     try {
                         // Log warnings if queries are null
                         if (saveQuery == null) {
-                            Logging.warn(project, MyToolWindowFactory::class.java, "saveQuery is null - export bridge cannot be injected")
+                            Logging.warn(
+                                project,
+                                MyToolWindowFactory::class.java,
+                                "saveQuery is null - export bridge cannot be injected"
+                            )
                         }
                         if (notifyQuery == null) {
-                            Logging.warn(project, MyToolWindowFactory::class.java, "notifyQuery is null - notification bridge cannot be injected")
+                            Logging.warn(
+                                project,
+                                MyToolWindowFactory::class.java,
+                                "notifyQuery is null - notification bridge cannot be injected"
+                            )
                         }
                         if (consoleQuery == null) {
-                            Logging.warn(project, MyToolWindowFactory::class.java, "consoleQuery is null - console bridge cannot be injected")
+                            Logging.warn(
+                                project,
+                                MyToolWindowFactory::class.java,
+                                "consoleQuery is null - console bridge cannot be injected"
+                            )
                         }
                         
                         // Execute inject() code to define the bridge functions
@@ -369,7 +390,7 @@ class MyToolWindowFactory : ToolWindowFactory {
                         // Provide fallback implementations for bridges that failed to inject
                         val fallbackJs = """
                             // Fallback for notification bridge if it failed to inject
-                            if (typeof window.__bubbleNotify_bridge !== 'function') {
+                            if (typeof window.__bubbleNotify_bridge !== 'function' || (window.__bubbleNotify_bridge && window.__bubbleNotify_bridge.__bubbleStub)) {
                                 console.info('[BubbleUnits] Creating fallback for __bubbleNotify_bridge');
                                 window.__bubbleNotify_bridge = function(msg) {
                                     console.info('[BubbleUnits] Fallback notification: ' + msg);
@@ -402,7 +423,7 @@ class MyToolWindowFactory : ToolWindowFactory {
                                 // Ensure notify alias exists, looking up bridge dynamically on each call
                                 window.__bubbleNotify = function(msg){
                                   try {
-                                    var bridge = (typeof window !== 'undefined' && typeof window.__bubbleNotify_bridge === 'function') ? window.__bubbleNotify_bridge : null;
+                                    var bridge = (typeof window !== 'undefined' && typeof window.__bubbleNotify_bridge === 'function' && !window.__bubbleNotify_bridge.__bubbleStub) ? window.__bubbleNotify_bridge : null;
                                     if (bridge) bridge(String(msg==null?'' : msg));
                                   } catch(e){}
                                 };
@@ -412,7 +433,7 @@ class MyToolWindowFactory : ToolWindowFactory {
                               // Define __bubbleSave if missing and provide chunking sender
                               if (typeof window !== 'undefined' && typeof window.__bubbleSave !== 'function') {
                                 function __bubbleSendRaw(s){
-                                  try { if (typeof window !== 'undefined' && typeof window.__bubbleSave_send === 'function') { window.__bubbleSave_send(s); return true; } } catch(e){}
+                                  try { if (typeof window !== 'undefined' && typeof window.__bubbleSave_send === 'function' && !window.__bubbleSave_send.__bubbleStub) { window.__bubbleSave_send(s); return true; } } catch(e){}
                                   return false;
                                 }
                                 window.__bubbleSave = (function(){
@@ -434,7 +455,7 @@ class MyToolWindowFactory : ToolWindowFactory {
                               }
                               function buSend(kind,name,b64){
                                 try { if (typeof window.__bubbleSave==='function') { window.__bubbleSave(kind+'\t'+name+'\t'+b64); return; } } catch(e) {}
-                                try { location.hash = '#__buSave=' + encodeURIComponent(kind+'|'+name) + '&d=' + b64; } catch(e){}
+                                try { location.hash = '#__buSave=' + encodeURIComponent(kind+'|'+name) + '&d=' + encodeURIComponent(b64) + '&t=' + Date.now(); } catch(e){}
                               }
                               // Provide a stable window.__bubble API used by bubbles.js
                               try {
@@ -446,18 +467,10 @@ class MyToolWindowFactory : ToolWindowFactory {
                                 window.__bubble.exportJson = function(name, b64){ return window.__bubble.save('json', name, b64); };
                                 window.__bubble.exportPng = function(name, b64){ return window.__bubble.save('png', name, b64); };
                               } catch(e) {}
-                              function bindIfPresent(el, listener){ try{ if(!el) return; if(el.getAttribute('data-bu-bound')==='1') return; el.setAttribute('data-bu-bound','1'); el.addEventListener('click', listener, true);}catch(e){} }
-                              function tryBindButtons(){
-                                try {
-                                  var svgBtn=document.getElementById('svg_download_link');
-                                  var pngBtn=document.getElementById('png_download_link');
-                                  var jsonBtn=document.getElementById('json_report_download_link');
-                                  bindIfPresent(svgBtn, function(ev){ ev.preventDefault(); var s=serializeSvg(); if(!s){ try{ window.__bubbleNotify && window.__bubbleNotify('No SVG found to export'); }catch(e){} return;} var b=btoa(unescape(encodeURIComponent(s))); buSend('svg','phpunit-bubble-report.svg', b); });
-                                  bindIfPresent(pngBtn, async function(ev){ ev.preventDefault(); var s=serializeSvg(); if(!s){ try{ window.__bubbleNotify && window.__bubbleNotify('No SVG found to export'); }catch(e){} return;} var b=await toPng(s); buSend('png','phpunit-bubble-report.png', b); });
-                                  bindIfPresent(jsonBtn, function(ev){ ev.preventDefault(); var data={circles:Array.from(document.querySelectorAll('#bubbles svg circle')).map(function(c){ return { cx:c.getAttribute('cx'), cy:c.getAttribute('cy'), r:c.getAttribute('r'), cls:c.getAttribute('class') }; })}; var txt=JSON.stringify(data,null,2); var b=btoa(unescape(encodeURIComponent(txt))); buSend('json','phpunit-bubble-report.json', b); });
-                                } catch(e) {}
-                              }
-                              tryBindButtons();
+                              // Direct element bindings removed to avoid duplicate exports; use delegated listener only.
+                              function bindIfPresent(el, listener) { /* no-op */ }
+                              function tryBindButtons(){ /* no-op */ }
+                              // No direct binding call here to avoid duplicates.
                               try { if (typeof window.__bubbleNotify==='function') window.__bubbleNotify('Bridge reinjected'); } catch(e){}
                             })();
                         """.trimIndent()
@@ -595,7 +608,10 @@ class MyToolWindowFactory : ToolWindowFactory {
                     }
                     val body = buildString {
                         if (safeMsg.isNotBlank()) append(safeMsg)
-                        if (!dirPath.isNullOrBlank()) {
+                        val includeDir = safeMsg.startsWith("Saved", ignoreCase = true) ||
+                                safeMsg.startsWith("Saving", ignoreCase = true) ||
+                                safeMsg.startsWith("Exporting", ignoreCase = true)
+                        if (includeDir && !dirPath.isNullOrBlank()) {
                             if (isNotEmpty()) append('\n')
                             append("Snapshot directory: ")
                             append(dirPath)
@@ -640,7 +656,10 @@ class MyToolWindowFactory : ToolWindowFactory {
                         when {
                             hash.startsWith("__buNotify=") -> {
                                 val enc = hash.substringAfter("__buNotify=").substringBefore('&')
-                                val msg = try { java.net.URLDecoder.decode(enc, java.nio.charset.StandardCharsets.UTF_8) } catch (_: Exception) { enc }
+                                val msg = try { java.net.URLDecoder.decode(
+                                    enc,
+                                    java.nio.charset.StandardCharsets.UTF_8
+                                ) } catch (_: Exception) { enc }
                                 try {
                                     com.intellij.notification.NotificationGroupManager.getInstance()
                                         .getNotificationGroup("BubbleUnits")
@@ -655,14 +674,18 @@ class MyToolWindowFactory : ToolWindowFactory {
                             hash.startsWith("__buSave=") -> {
                                 val params = hash.substringAfter("__buSave=")
                                 val namePart = params.substringBefore('&')
-                                val dataPart = params.substringAfter("&d=", "")
+                                // Robustly extract d= param and URL-decode it before Base64 decoding
+                                val dataParam = Regex("(?:^|&)d=([^&]*)").find(params)?.groupValues?.get(1) ?: ""
                                 val kindAndName = try { java.net.URLDecoder.decode(namePart, java.nio.charset.StandardCharsets.UTF_8) } catch (_: Exception) { namePart }
                                 val sep = kindAndName.indexOf('|')
                                 val kind = if (sep > 0) kindAndName.substring(0, sep) else "file"
                                 val name = if (sep > 0) kindAndName.substring(sep + 1) else "snapshot"
                                 try {
-                                    val bytes = java.util.Base64.getDecoder().decode(dataPart)
+                                    val dataDecoded = try { java.net.URLDecoder.decode(dataParam, java.nio.charset.StandardCharsets.UTF_8) } catch (_: Exception) { dataParam }
+                                    val bytes = java.util.Base64.getDecoder().decode(dataDecoded)
+                                    Logging.info(project, MyToolWindowFactory::class.java, "Hash save received: kind=${kind}, name=${name}, bytes=${bytes.size}")
                                     val dir = settings.getOrCreateSnapshotDir()
+                                    Logging.info(project, MyToolWindowFactory::class.java, "Snapshot dir: ${dir.absolutePath}")
                                     // Add timestamp to filename to avoid overwriting
                                     val timestamp = java.time.LocalDateTime.now().format(
                                         java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss")
@@ -672,12 +695,12 @@ class MyToolWindowFactory : ToolWindowFactory {
                                     val timestampedName = "${baseName}-${timestamp}${extension}"
                                     val file = java.io.File(dir, timestampedName)
                                     file.writeBytes(bytes)
+                                    Logging.info(project, MyToolWindowFactory::class.java, "Hash save wrote file: ${file.absolutePath} (${bytes.size} bytes)")
                                     // Refresh the VFS to ensure the snapshot folder shows the new file
                                     try {
-                                        val vFile = com.intellij.openapi.vfs.LocalFileSystem.getInstance().refreshAndFindFileByIoFile(dir)
-                                        if (vFile != null) {
-                                            vFile.refresh(false, true)
-                                        }
+                                        val lf = com.intellij.openapi.vfs.LocalFileSystem.getInstance()
+                                        lf.refreshAndFindFileByIoFile(file)?.refresh(false, false)
+                                        lf.refreshAndFindFileByIoFile(dir)?.refresh(false, true)
                                     } catch (_: Exception) {}
                                     try {
                                         addExport(kind, file.absolutePath)
@@ -714,6 +737,7 @@ class MyToolWindowFactory : ToolWindowFactory {
                             if (id == null) {
                                 JBCefJSQuery.Response(null, 400, "Missing id")
                             } else {
+                                Logging.info(project, MyToolWindowFactory::class.java, "JSQuery save BEGIN id=${id} kind=${kind} name=${name}")
                                 pendingMap[id] = Pending(kind, name, StringBuilder())
                                 JBCefJSQuery.Response("OK")
                             }
@@ -745,7 +769,9 @@ class MyToolWindowFactory : ToolWindowFactory {
                                     JBCefJSQuery.Response(null, 400, "Empty payload")
                                 } else {
                                     val bytes = java.util.Base64.getDecoder().decode(dataStr)
+                                    Logging.info(project, MyToolWindowFactory::class.java, "JSQuery save END id=${id} kind=${p.kind} name=${p.name} bytes=${bytes.size}")
                                     val dir = settings.getOrCreateSnapshotDir()
+                                    Logging.info(project, MyToolWindowFactory::class.java, "Snapshot dir: ${dir.absolutePath}")
                                     // Add timestamp to filename to avoid overwriting
                                     val timestamp = java.time.LocalDateTime.now().format(
                                         java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss")
@@ -755,12 +781,12 @@ class MyToolWindowFactory : ToolWindowFactory {
                                     val timestampedName = "${baseName}-${timestamp}${extension}"
                                     val file = java.io.File(dir, timestampedName)
                                     file.writeBytes(bytes)
+                                    Logging.info(project, MyToolWindowFactory::class.java, "JSQuery save wrote file: ${file.absolutePath} (${bytes.size} bytes)")
                                     // Refresh the VFS to ensure the snapshot folder shows the new file
                                     try {
-                                        val vFile = com.intellij.openapi.vfs.LocalFileSystem.getInstance().refreshAndFindFileByIoFile(dir)
-                                        if (vFile != null) {
-                                            vFile.refresh(false, true)
-                                        }
+                                        val lf = com.intellij.openapi.vfs.LocalFileSystem.getInstance()
+                                        lf.refreshAndFindFileByIoFile(file)?.refresh(false, false)
+                                        lf.refreshAndFindFileByIoFile(dir)?.refresh(false, true)
                                     } catch (_: Exception) {}
                                     try {
                                         addExport(p.kind, file.absolutePath)
@@ -778,7 +804,9 @@ class MyToolWindowFactory : ToolWindowFactory {
                                 JBCefJSQuery.Response(null, 400, "Empty payload")
                             } else {
                                 val bytes = java.util.Base64.getDecoder().decode(b64)
+                                Logging.info(project, MyToolWindowFactory::class.java, "JSQuery single-shot save kind=${kind} name=${name} bytes=${bytes.size}")
                                 val dir = settings.getOrCreateSnapshotDir()
+                                Logging.info(project, MyToolWindowFactory::class.java, "Snapshot dir: ${dir.absolutePath}")
                                 // Add timestamp to filename to avoid overwriting
                                 val timestamp = java.time.LocalDateTime.now().format(
                                     java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss")
@@ -788,12 +816,12 @@ class MyToolWindowFactory : ToolWindowFactory {
                                 val timestampedName = "${baseName}-${timestamp}${extension}"
                                 val file = java.io.File(dir, timestampedName)
                                 file.writeBytes(bytes)
+                                Logging.info(project, MyToolWindowFactory::class.java, "JSQuery single-shot wrote file: ${file.absolutePath} (${bytes.size} bytes)")
                                 // Refresh the VFS to ensure the snapshot folder shows the new file
                                 try {
-                                    val vFile = com.intellij.openapi.vfs.LocalFileSystem.getInstance().refreshAndFindFileByIoFile(dir)
-                                    if (vFile != null) {
-                                        vFile.refresh(false, true)
-                                    }
+                                    val lf = com.intellij.openapi.vfs.LocalFileSystem.getInstance()
+                                    lf.refreshAndFindFileByIoFile(file)?.refresh(false, false)
+                                    lf.refreshAndFindFileByIoFile(dir)?.refresh(false, true)
                                 } catch (_: Exception) {}
                                 try {
                                     addExport(kind, file.absolutePath)
@@ -811,8 +839,22 @@ class MyToolWindowFactory : ToolWindowFactory {
             br.jbCefClient.addLoadHandler(object: CefLoadHandlerAdapter() {
                 override fun onLoadStart(browser: org.cef.browser.CefBrowser?, frame: CefFrame?, transitionType: org.cef.network.CefRequest.TransitionType?) {
                     if (frame == null || !frame.isMain) return
-                    // DO NOT create early stubs - let JSQuery.inject() be the first to define these properties
-                    // Early stubs were preventing inject() from properly defining the real bridges
+                    // Provide minimal no-op stubs so early page scripts don't error before inject() runs.
+                    // These are defined only if missing and will be overwritten by JSQuery.inject() later.
+                    try {
+                        val earlyStubs = """
+                            (function(){
+                              try {
+                                if (typeof window !== 'undefined') {
+                                  if (typeof window.__bubbleSave_send !== 'function') { window.__bubbleSave_send = function(){ return 'noop'; }; window.__bubbleSave_send.__bubbleStub = true; }
+                                  if (typeof window.__bubbleConsole_bridge !== 'function') { window.__bubbleConsole_bridge = function(){ return 'noop'; }; window.__bubbleConsole_bridge.__bubbleStub = true; }
+                                  if (typeof window.__bubbleNotify_bridge !== 'function') { window.__bubbleNotify_bridge = function(){ return 'noop'; }; window.__bubbleNotify_bridge.__bubbleStub = true; }
+                                }
+                              } catch (e) { try { console.error('[BubbleUnits] Early stub error', e); } catch(ex) {} }
+                            })();
+                        """.trimIndent()
+                        browser?.executeJavaScript(earlyStubs, frame.url, 0)
+                    } catch (_: Exception) {}
                 }
                 override fun onLoadEnd(browser: org.cef.browser.CefBrowser?, frame: CefFrame?, httpStatusCode: Int) {
                     if (frame == null || !frame.isMain) return
@@ -840,7 +882,7 @@ class MyToolWindowFactory : ToolWindowFactory {
                         // Add fallback for notification bridge if it failed to inject
                         val fallbackJs = """
                             // Fallback for notification bridge if it failed to inject
-                            if (typeof window.__bubbleNotify_bridge !== 'function') {
+                            if (typeof window.__bubbleNotify_bridge !== 'function' || (window.__bubbleNotify_bridge && window.__bubbleNotify_bridge.__bubbleStub)) {
                                 console.info('[BubbleUnits] Creating fallback for __bubbleNotify_bridge');
                                 window.__bubbleNotify_bridge = function(msg) {
                                     console.info('[BubbleUnits] Fallback notification: ' + msg);
@@ -867,17 +909,24 @@ class MyToolWindowFactory : ToolWindowFactory {
                         """.trimIndent()
                         browser?.executeJavaScript(verifyBridges, frame.url, 0)
                         val js = """
-                            // Define fallback for __bubbleSave_send if injection failed
-                            if (typeof window.__bubbleSave_send !== 'function') {
+                            (function(){
+                              try {
+                                if (typeof window !== 'undefined') {
+                                  if (window.__bubbleBridgeInstalled) { try { console.info('[BubbleUnits] Bridge already installed'); } catch(e) {} ; return; }
+                                  window.__bubbleBridgeInstalled = true;
+                                }
+                              } catch(e) {}
+                            })();
+                            // Define fallback for __bubbleSave_send if injection failed or only a stub exists
+                            if (typeof window.__bubbleSave_send !== 'function' || (window.__bubbleSave_send && window.__bubbleSave_send.__bubbleStub)) {
                               console.info('[BubbleUnits] Creating fallback for __bubbleSave_send');
                               window.__bubbleSave_send = function(data) {
                                 console.info('[BubbleUnits] __bubbleSave_send fallback called with data length: ' + (data ? data.length : 0));
                                 // Use hash-based fallback mechanism
                                 try {
                                   if (!data) return;
-                                  var parts = data.split('\t');
+                                  var parts = String(data||'').split('\t');
                                   var command = parts[0];
-                                  
                                   // For BEGIN command
                                   if (command === 'BEGIN') {
                                     var id = parts[1] || '';
@@ -886,7 +935,6 @@ class MyToolWindowFactory : ToolWindowFactory {
                                     window.__bubbleExportSession = { id: id, kind: kind, name: name, chunks: [] };
                                     return;
                                   }
-                                  
                                   // For CHUNK command
                                   if (command === 'CHUNK') {
                                     if (!window.__bubbleExportSession) return;
@@ -894,26 +942,22 @@ class MyToolWindowFactory : ToolWindowFactory {
                                     window.__bubbleExportSession.chunks.push(chunk);
                                     return;
                                   }
-                                  
                                   // For END command
                                   if (command === 'END') {
                                     if (!window.__bubbleExportSession) return;
                                     var session = window.__bubbleExportSession;
                                     var b64 = session.chunks.join('');
-                                    var url = '#__buSave=' + encodeURIComponent(session.kind + '|' + session.name) + '&d=' + b64;
-                                    window.location.href = url;
+                                    location.hash = '#__buSave=' + encodeURIComponent(session.kind + '|' + session.name) + '&d=' + encodeURIComponent(b64) + '&t=' + Date.now();
                                     window.__bubbleExportSession = null;
                                     return;
                                   }
-                                  
                                   // For single-shot export
                                   var kind = parts[0] || 'file';
                                   var name = parts[1] || 'snapshot';
                                   var b64 = parts.slice(2).join('\t');
-                                  var url = '#__buSave=' + encodeURIComponent(kind + '|' + name) + '&d=' + b64;
-                                  window.location.href = url;
+                                  location.hash = '#__buSave=' + encodeURIComponent(kind + '|' + name) + '&d=' + encodeURIComponent(b64) + '&t=' + Date.now();
                                 } catch (e) {
-                                  console.error('[BubbleUnits] Fallback __bubbleSave_send error:', e);
+                                  try { console.error('[BubbleUnits] Fallback __bubbleSave_send error:', e); } catch(ex) {}
                                 }
                               };
                             }
@@ -924,7 +968,7 @@ class MyToolWindowFactory : ToolWindowFactory {
                                 window.__bubbleNotify = function(msg){
                                   try {
                                     // Look up the bridge dynamically to ensure we get the real JSQuery bridge, not the early stub
-                                    var bridge = (typeof window !== 'undefined' && typeof window.__bubbleNotify_bridge === 'function') ? window.__bubbleNotify_bridge : null;
+                                    var bridge = (typeof window !== 'undefined' && typeof window.__bubbleNotify_bridge === 'function' && !window.__bubbleNotify_bridge.__bubbleStub) ? window.__bubbleNotify_bridge : null;
                                     if (bridge) { bridge(String(msg == null ? '' : msg)); }
                                     else { console.info('[BubbleUnits] notify: bridge not ready - ' + (msg || '')); }
                                   } catch (e) { try { console.error(e); } catch(ex){} }
@@ -934,24 +978,31 @@ class MyToolWindowFactory : ToolWindowFactory {
                             // Mirror console.* into the IDE log via console bridge, preserving original behavior
                             try {
                               (function(){
-                                var bridge = (typeof window !== 'undefined' && typeof window.__bubbleConsole_bridge === 'function') ? window.__bubbleConsole_bridge : null;
                                 if (!window.__bubbleConsoleHooked) {
                                   window.__bubbleConsoleHooked = true;
                                   var orig = { log: console.log, info: console.info, warn: console.warn, error: console.error, debug: console.debug };
                                   function asString(v){ try{ if(v==null) return String(v); if(typeof v==='string') return v; if(typeof v==='object') return JSON.stringify(v); return String(v);}catch(e){ try{return String(v);}catch(e2){return '[unprintable]';} } }
-                                  function fwd(level, args){ try{ if(!bridge) return; var msg = Array.prototype.map.call(args, asString).join(' '); bridge(level+'\t'+msg); } catch(e){} }
+                                  function fwd(level, args){ try{ var b=(typeof window !== 'undefined' && typeof window.__bubbleConsole_bridge === 'function' && !window.__bubbleConsole_bridge.__bubbleStub)?window.__bubbleConsole_bridge:null; if(!b) return; var msg = Array.prototype.map.call(args, asString).join(' '); b(level+'\t'+msg); } catch(e){} }
                                   ['log','info','warn','error','debug'].forEach(function(k){ try{ console[k] = function(){ try{ orig[k] && orig[k].apply(console, arguments); }catch(e){}; fwd(k, arguments); }; } catch(e){} });
                                 }
                               })();
                             } catch (e) {}
                             try { console.info('[BubbleUnits] Bridge injected (save, notify, console)'); } catch(e) {}
-                            try { if (typeof window !== 'undefined' && typeof window.__bubbleNotify === 'function') { window.__bubbleNotify('BubbleUnits bridge ready'); } } catch(e) {}
+                            try {
+                              if (typeof window !== 'undefined') {
+                                window.__bubbleBridgeReadyCount = (window.__bubbleBridgeReadyCount||0) + 1;
+                                if (!window.__bubbleBridgeReadyNotified) {
+                                  window.__bubbleBridgeReadyNotified = true;
+                                  if (typeof window.__bubbleNotify === 'function') { window.__bubbleNotify('BubbleUnits bridge ready'); }
+                                }
+                              }
+                            } catch(e) {}
                             (function(){
                               // Provide a sender that dynamically looks up the bridge to avoid hitting early stubs
                               function __bubbleSendRaw(s){
                                 try {
                                   // Look up the bridge dynamically to ensure we get the real JSQuery bridge, not the early stub
-                                  var bridge = (typeof window !== 'undefined' && typeof window.__bubbleSave_send === 'function') ? window.__bubbleSave_send : null;
+                                  var bridge = (typeof window !== 'undefined' && typeof window.__bubbleSave_send === 'function' && !window.__bubbleSave_send.__bubbleStub) ? window.__bubbleSave_send : null;
                                   if (bridge) { bridge(s); return true; }
                                 } catch(e) { console.error(e); }
                                 return false;
@@ -1025,7 +1076,7 @@ class MyToolWindowFactory : ToolWindowFactory {
                               }
                               function buSend(kind,name,b64){
                                 try { if (typeof window.__bubbleSave==='function') { window.__bubbleSave(kind+'\t'+name+'\t'+b64); return; } } catch(e) {}
-                                try { location.hash = '#__buSave=' + encodeURIComponent(kind+'|'+name) + '&d=' + b64; } catch(e){}
+                                try { location.hash = '#__buSave=' + encodeURIComponent(kind+'|'+name) + '&d=' + encodeURIComponent(b64) + '&t=' + Date.now(); } catch(e){}
                               }
                               // Provide a stable window.__bubble API used by bubbles.js
                               try {
@@ -1056,6 +1107,17 @@ class MyToolWindowFactory : ToolWindowFactory {
                                 // Log that the API is ready
                                 console.info('[BubbleUnits] window.__bubble API initialized successfully');
                               } catch(e) { try { console.error('[BubbleUnits] Failed to initialize window.__bubble API:', e); } catch(ex) {} }
+                              // Ensure a visible disabled style for export buttons
+                              (function ensureDisabledStyles(){
+                                try {
+                                  if (!document.getElementById('bu-disabled-style')) {
+                                    var st = document.createElement('style');
+                                    st.id = 'bu-disabled-style';
+                                    st.textContent = '\n.bu-disabled, #svg_download_link[disabled], #png_download_link[disabled], #json_report_download_link[disabled] {\n  opacity: 0.55 !important;\n  filter: grayscale(100%) !important;\n  cursor: default !important;\n  pointer-events: none !important;\n}\n';
+                                    (document.head || document.documentElement).appendChild(st);
+                                  }
+                                } catch(_) {}
+                              })();
                               function bindIfPresent(el, listener) {
                                 try {
                                   if (!el) return;
@@ -1081,6 +1143,7 @@ class MyToolWindowFactory : ToolWindowFactory {
                                     var b = btoa(unescape(encodeURIComponent(s)));
                                     try { if (typeof window.__bubbleNotify === 'function') { window.__bubbleNotify('Saving: phpunit-bubble-report.svg'); } } catch(e) {}
                                     buSend('svg','phpunit-bubble-report.svg', b);
+                                    try { if (svgBtn) { svgBtn.setAttribute('disabled','true'); svgBtn.classList.add('bu-disabled'); svgBtn.title = 'Exported'; if (svgBtn && svgBtn.style) svgBtn.style.pointerEvents = 'none'; } } catch(e) {}
                                   });
                                   bindIfPresent(pngBtn, async function(ev){
                                     ev.preventDefault();
@@ -1093,6 +1156,7 @@ class MyToolWindowFactory : ToolWindowFactory {
                                     var b = await toPng(s);
                                     try { if (typeof window.__bubbleNotify === 'function') { window.__bubbleNotify('Saving: phpunit-bubble-report.png'); } } catch(e) {}
                                     buSend('png','phpunit-bubble-report.png', b);
+                                    try { if (pngBtn) { pngBtn.setAttribute('disabled','true'); pngBtn.classList.add('bu-disabled'); pngBtn.title = 'Exported'; if (pngBtn && pngBtn.style) pngBtn.style.pointerEvents = 'none'; } } catch(e) {}
                                   });
                                   bindIfPresent(jsonBtn, function(ev){
                                     ev.preventDefault();
@@ -1101,6 +1165,7 @@ class MyToolWindowFactory : ToolWindowFactory {
                                     var b = btoa(unescape(encodeURIComponent(txt)));
                                     try { if (typeof window.__bubbleNotify === 'function') { window.__bubbleNotify('Saving: phpunit-bubble-report.json'); } } catch(e) {}
                                     buSend('json','phpunit-bubble-report.json', b);
+                                    try { if (jsonBtn) { jsonBtn.setAttribute('disabled','true'); jsonBtn.classList.add('bu-disabled'); jsonBtn.title = 'Exported'; } } catch(e) {}
                                   });
                                 } catch(e) { try { console.error(e); } catch(ex) {} }
                               }

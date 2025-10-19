@@ -19,8 +19,8 @@ formatting:
   Indentation:
     active: false
   MaximumLineLength:
-    active: true
-    maxLineLength: 140
+    active: false
+    maxLineLength: 240
 
 style:
   MagicNumber:
