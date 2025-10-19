@@ -12,7 +12,7 @@ plugins {
     alias(libs.plugins.changelog) // Gradle Changelog Plugin
     alias(libs.plugins.qodana) // Gradle Qodana Plugin
     alias(libs.plugins.kover) // Gradle Kover Plugin
-    id("io.gitlab.arturbosch.detekt") version "1.23.7" // Kotlin static analysis (Detekt)
+    id("io.gitlab.arturbosch.detekt") version "1.23.8" // Kotlin static analysis (Detekt)
     id("com.github.node-gradle.node") version "7.0.1" // Node Support
 }
 
